@@ -1,0 +1,16 @@
+ase==3.22.1
+black==22.3.0
+e3nn==0.4.4
+matplotlib
+numba
+orjson
+pip
+pre-commit==2.10.*
+pymatgen==2023.5.10
+pytest
+pyyaml
+submitit
+syrupy
+tensorboard
+tqdm
+wandb
