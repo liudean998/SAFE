@@ -112,20 +112,18 @@ class AtomEmbedding(torch.nn.Module):
 #         return h
 #
     # z+atoms_feature->h
-    def __init__(self, emb_size: int, num_elements: int) -> None:
+    def __init__(self, emb_size: int) -> None:
         super().__init__()
         self.emb_size = emb_size
-        emb_size = emb_size - 8 - 74
-        self.embeddings = nn.Embedding(num_elements, emb_size)
-        torch.nn.init.uniform_(
-            self.embeddings.weight, a=-np.sqrt(3), b=np.sqrt(3)
-        )
-        self.atom_info_normal = {key: torch.tensor(value, dtype=torch.float32)
-                                 for key, value in atom_info_normal.items()}
+        emb_size = emb_size -  75
+        atom_linear = nn.Linear(7, emb_size)
+        atom_info_tensor = torch.Tensor([value for key, value in atom_info_normal],
+                                        dtype=torch.float32).T
+        self.atom_emb = atom_linear(atom_info_tensor)
 
     def forward(self, Z, distance, ads_features):
         # Get the feature vectors for each atom
-        device = next(self.embeddings.parameters()).device
+        device = next(self.atom_emb.parameters()).device
         Z = Z.to(device)
         h = self.embeddings(Z - 1)
         h_combined = h
@@ -135,7 +133,7 @@ class AtomEmbedding(torch.nn.Module):
         distance = distance.to(device).unsqueeze(1)
         ads_features = ads_features.to(device)
         h_combined = torch.cat((h_combined, distance, ads_features), dim=1)
-
+        h.requires_grad_(True)
         return h_combined
 
 # 卷积
