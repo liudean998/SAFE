@@ -22,10 +22,10 @@ model:
   num_concat: 1
   num_atom: 3
   num_output_afteratom: 3
-  cutoff: 12.0
-  cutoff_qint: 12.0
-  cutoff_aeaint: 12.0
-  cutoff_aint: 12.0
+  cutoff: 8.0
+  cutoff_qint: 8.0
+  cutoff_aeaint: 8.0
+  cutoff_aint: 8.0
   max_neighbors: 10
   max_neighbors_qint: 8
   max_neighbors_aeaint: 20
@@ -39,7 +39,7 @@ model:
     name: spherical_harmonics
   sbf:
     name: legendre_outer
-  extensive: True
+  extensive: False
   output_init: HeOrthogonal
   activation: silu
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt

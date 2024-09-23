@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 
 from .base_layers import Dense
+from .static.atom_info import atom_info_normal
 
 
 class AtomEmbedding(torch.nn.Module):
@@ -58,7 +59,7 @@ class AtomEmbedding(torch.nn.Module):
 #
 #         # Create a dense layer to transform the concatenated feature vector to the desired embedding size
 #         self.dense = nn.Linear(adjusted_feature_size, emb_size)
-#
+
 #     def forward(self, Z, center_distance, adstype):
 #         # Get the feature vectors for each atom
 #         device = next(self.dense.parameters()).device
@@ -75,40 +76,67 @@ class AtomEmbedding(torch.nn.Module):
 #         return h
 
 # z→ dense+distances+ads_features → h
-    def __init__(self, emb_size: int, atom_features: dict) -> None:
+#     def __init__(self, emb_size: int, atom_features: dict) -> None:
+#         super().__init__()
+#         self.emb_size = emb_size
+#         self.atom_features = atom_features
+#
+#         # Assuming each list in atom_features represents a feature vector for each atomic number
+#         feature_size = len(next(iter(atom_features.values())))
+#
+#         # Adjusted embedding size: emb_size - 75
+#         intermediate_emb_size = emb_size - 75
+#
+#         # Create a dense layer to transform the feature vector to the intermediate embedding size
+#         self.dense = nn.Linear(feature_size, intermediate_emb_size)
+#
+#
+#     def forward(self, Z, distances, ads_features):
+#         # Get the feature vectors for each atom
+#         device = next(self.dense.parameters()).device
+#         features = torch.stack([
+#             torch.tensor(self.atom_features[z.item()], dtype=torch.float32).to(device)
+#             for z in Z
+#         ]).to(device)
+#
+#         # Apply the dense layer to adjust the dimensionality
+#         transformed_features = self.dense(features)
+#
+#         # Ensure distances and ads_features are moved to the same device
+#         distances = distances.to(device).unsqueeze(1)  # Ensure distances is 2D with shape [N, 1]
+#         ads_features = ads_features.to(device)
+#
+#         # Concatenate the transformed features, distances, and ads_features
+#         h = torch.cat([transformed_features, distances, ads_features], dim=-1)
+#
+#         return h
+#
+    # z+atoms_feature->h
+    def __init__(self, emb_size: int, num_elements: int) -> None:
         super().__init__()
         self.emb_size = emb_size
-        self.atom_features = atom_features
+        emb_size = emb_size - 8 - 74
+        self.embeddings = nn.Embedding(num_elements, emb_size)
+        torch.nn.init.uniform_(
+            self.embeddings.weight, a=-np.sqrt(3), b=np.sqrt(3)
+        )
+        self.atom_info_normal = {key: torch.tensor(value, dtype=torch.float32)
+                                 for key, value in atom_info_normal.items()}
 
-        # Assuming each list in atom_features represents a feature vector for each atomic number
-        feature_size = len(next(iter(atom_features.values())))
-
-        # Adjusted embedding size: emb_size - 75
-        intermediate_emb_size = emb_size - 75
-
-        # Create a dense layer to transform the feature vector to the intermediate embedding size
-        self.dense = nn.Linear(feature_size, intermediate_emb_size)
-
-
-    def forward(self, Z, distances, ads_features):
+    def forward(self, Z, distance, ads_features):
         # Get the feature vectors for each atom
-        device = next(self.dense.parameters()).device
-        features = torch.stack([
-            torch.tensor(self.atom_features[z.item()], dtype=torch.float32).to(device)
-            for z in Z
-        ]).to(device)
-
-        # Apply the dense layer to adjust the dimensionality
-        transformed_features = self.dense(features)
-
-        # Ensure distances and ads_features are moved to the same device
-        distances = distances.to(device).unsqueeze(1)  # Ensure distances is 2D with shape [N, 1]
+        device = next(self.embeddings.parameters()).device
+        Z = Z.to(device)
+        h = self.embeddings(Z - 1)
+        h_combined = h
+        for key, value in self.atom_info_normal.items():
+            value= value.to(device)
+            h_combined = torch.cat((h_combined, value[Z-1]), dim=1)
+        distance = distance.to(device).unsqueeze(1)
         ads_features = ads_features.to(device)
+        h_combined = torch.cat((h_combined, distance, ads_features), dim=1)
 
-        # Concatenate the transformed features, distances, and ads_features
-        h = torch.cat([transformed_features, distances, ads_features], dim=-1)
-
-        return h
+        return h_combined
 
 # 卷积
 #     def __init__(self, emb_size: int, atom_features: dict) -> None:
