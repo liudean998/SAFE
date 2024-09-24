@@ -375,7 +375,7 @@ class GemNetOC(BaseModel):
         )
 
         # Embedding blocks
-        self.atom_emb = AtomEmbedding(emb_size_atom, num_elements)
+        self.atom_emb = AtomEmbedding(emb_size_atom)
         # self.atom_emb = AtomEmbedding(emb_size_atom, atom_features)  # 修改的地方
         self.edge_emb = EdgeEmbedding(
             emb_size_atom, num_radial, emb_size_edge, activation=activation

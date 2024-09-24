@@ -116,23 +116,22 @@ class AtomEmbedding(torch.nn.Module):
         super().__init__()
         self.emb_size = emb_size
         emb_size = emb_size -  75
-        atom_linear = nn.Linear(7, emb_size)
-        atom_info_tensor = torch.Tensor([value for key, value in atom_info_normal],
-                                        dtype=torch.float32).T
-        self.atom_emb = atom_linear(atom_info_tensor)
+        self.atom_linear = nn.Linear(7, emb_size)
+        for key in atom_info_normal:
+            atom_info_normal[key] = torch.tensor(atom_info_normal[key])
+
+        self.atom_info_tensor = torch.cat([atom_info_normal[key] for key in atom_info_normal], dim=1)
 
     def forward(self, Z, distance, ads_features):
         # Get the feature vectors for each atom
-        device = next(self.atom_emb.parameters()).device
-        Z = Z.to(device)
-        h = self.embeddings(Z - 1)
-        h_combined = h
-        for key, value in self.atom_info_normal.items():
-            value= value.to(device)
-            h_combined = torch.cat((h_combined, value[Z-1]), dim=1)
+        device = next(self.atom_linear.parameters()).device
+        self.atom_info_tensor = self.atom_info_tensor.to(device)
+
+        atom_emb = self.atom_linear(self.atom_info_tensor)
+        h = atom_emb[Z-1]
         distance = distance.to(device).unsqueeze(1)
         ads_features = ads_features.to(device)
-        h_combined = torch.cat((h_combined, distance, ads_features), dim=1)
+        h_combined = torch.cat((h, distance, ads_features), dim=1).to(device)
         h.requires_grad_(True)
         return h_combined
 

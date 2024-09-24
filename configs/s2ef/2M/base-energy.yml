@@ -9,14 +9,14 @@ dataset:
 #    grad_target_std: 2.887317180633545
 #  - src: data/s2ef/all/val_id/
 #  - src: data/s2ef/all/val_id/
-  - src: /home/wuyinkai/liud/dataset/Cu_self/train_1
+  - src: /home/wuyinkai/liud/dataset/Cu_self_1/train_1
     normalize_labels: True
     target_mean: -0.7554450631141663
     target_std: 2.887317180633545
     grad_target_mean: 0.0
     grad_target_std: 2.887317180633545
-  - src: /home/wuyinkai/liud/dataset/Cu_self/val_1
-  - src: /home/wuyinkai/liud/dataset/Cu_self/test_1
+  - src: /home/wuyinkai/liud/dataset/Cu_self_1/val_1
+  - src: /home/wuyinkai/liud/dataset/Cu_self_1/test_1
 
 
 logger: tensorboard
