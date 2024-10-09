@@ -830,7 +830,7 @@ class BaseTrainer(ABC):
         np.savez_compressed(
             results_file_path,
             ids1=predictions["ids1"],
-            ids2=predictions["ids2"],
+            # ids2=predictions["ids2"],
             **{key: predictions[key] for key in keys},
         )
 
@@ -849,7 +849,7 @@ class BaseTrainer(ABC):
                 )
                 rank_results = np.load(rank_path, allow_pickle=True)
                 gather_results["ids1"].extend(rank_results["ids1"])
-                gather_results["ids2"].extend(rank_results["ids2"])
+                # gather_results["ids2"].extend(rank_results["ids2"])
                 for key in keys:
                     if key.find("forces") >= 0:
                         gather_results[key].extend(
@@ -859,10 +859,11 @@ class BaseTrainer(ABC):
                 os.remove(rank_path)
 
             # 处理重复的问题
-            combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
+            # combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
+            combined_ids = gather_results["ids1"]
             _, idx = np.unique(combined_ids, return_index=True)
             gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
-            gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
+            # gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
             for k in keys:
                 if k.find("forces") >= 0:
                     gather_results[k] = np.concatenate(

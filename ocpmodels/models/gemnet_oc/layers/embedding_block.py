@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 
 from .base_layers import Dense
-from .static.atom_info import atom_info_normal
+from .static.atom_info import atom_infos as atom_info_normal
 
 
 class AtomEmbedding(torch.nn.Module):
@@ -23,26 +23,25 @@ class AtomEmbedding(torch.nn.Module):
     emb_size: int
         Atom embeddings size
     """
-# # 原
-#     def __init__(self, emb_size: int, num_elements: int) -> None:
-#         super().__init__()
-#         self.emb_size = emb_size
-#
-#         self.embeddings = torch.nn.Embedding(num_elements, emb_size)
-#         # init by uniform distribution
-#         torch.nn.init.uniform_(
-#             self.embeddings.weight, a=-np.sqrt(3), b=np.sqrt(3)
-#         )
-#
-#     def forward(self, Z) -> torch.Tensor:
-#         """
-#         Returns
-#         -------
-#         h: torch.Tensor, shape=(nAtoms, emb_size)
-#             Atom embeddings.
-#         """
-#         h = self.embeddings(Z - 1)  # -1 because Z.min()=1 (==Hydrogen)
-#         return h
+# 原
+    def __init__(self, emb_size: int, num_elements: int) -> None:
+        super().__init__()
+        self.emb_size = emb_size
+        self.embeddings = torch.nn.Embedding(num_elements, emb_size)
+        # init by uniform distribution
+        torch.nn.init.uniform_(
+            self.embeddings.weight, a=-np.sqrt(3), b=np.sqrt(3)
+        )
+
+    def forward(self, Z) -> torch.Tensor:
+        """
+        Returns
+        -------
+        h: torch.Tensor, shape=(nAtoms, emb_size)
+            Atom embeddings.
+        """
+        h = self.embeddings(Z - 1)  # -1 because Z.min()=1 (==Hydrogen)
+        return h
 
 
 # z+distances+ads_features → dense → h
@@ -112,28 +111,33 @@ class AtomEmbedding(torch.nn.Module):
 #         return h
 #
     # z+atoms_feature->h
-    def __init__(self, emb_size: int) -> None:
-        super().__init__()
-        self.emb_size = emb_size
-        emb_size = emb_size -  75
-        self.atom_linear = nn.Linear(7, emb_size)
-        for key in atom_info_normal:
-            atom_info_normal[key] = torch.tensor(atom_info_normal[key])
-
-        self.atom_info_tensor = torch.cat([atom_info_normal[key] for key in atom_info_normal], dim=1)
-
-    def forward(self, Z, distance, ads_features):
-        # Get the feature vectors for each atom
-        device = next(self.atom_linear.parameters()).device
-        self.atom_info_tensor = self.atom_info_tensor.to(device)
-
-        atom_emb = self.atom_linear(self.atom_info_tensor)
-        h = atom_emb[Z-1]
-        distance = distance.to(device).unsqueeze(1)
-        ads_features = ads_features.to(device)
-        h_combined = torch.cat((h, distance, ads_features), dim=1).to(device)
-        h.requires_grad_(True)
-        return h_combined
+    # def __init__(self, emb_size: int, num_elements:int) -> None:
+    #     super().__init__()
+    #     self.emb_size = emb_size
+    #     emb_size = emb_size -  74
+    #     self.atom_linear = nn.Linear(7, emb_size)
+    #     for key in atom_info_normal:
+    #         atom_info_normal[key] = torch.tensor(atom_info_normal[key])
+    #
+    #     self.atom_info_tensor = torch.cat([atom_info_normal[key] for key in atom_info_normal], dim=1)
+    #     # self.atom_linear = nn.Embedding(num_elements, emb_size)
+    #     # torch.nn.init.uniform_(self.atom_linear.weight,
+    #     #                        a=-np.sqrt(3),
+    #     #                        b=np.sqrt(3)
+    #     #                        )
+    # def forward(self, Z, ads_features):
+    #     # Get the feature vectors for each atom
+    #     device = next(self.atom_linear.parameters()).device
+    #     self.atom_info_tensor = self.atom_info_tensor.to(device)
+    #     atom_emb = self.atom_linear(self.atom_info_tensor)
+    #     h = atom_emb[Z-1]
+    #     # h = self.atom_linear(Z-1)
+    #     # distance = distance.to(device).unsqueeze(1)
+    #     ads_features = ads_features.to(device)
+    #     # h_combined = torch.cat((h, distance, ads_features), dim=1).to(device)
+    #     h_combined = torch.cat((h, ads_features), dim=1).to(device)
+    #     # h_combined.requires_grad_(True)
+    #     return h_combined
 
 # 卷积
 #     def __init__(self, emb_size: int, atom_features: dict) -> None:
@@ -228,7 +232,7 @@ class EdgeEmbedding(torch.nn.Module):
         h_t = h[edge_index[1]]  # shape=(nEdges, emb_size)
 
         m_st = torch.cat(
-            [h_s, h_t, m], dim=-1
+            [h_s, h_t, m], dim=-1 # 边的原子特征向量+距离
         )  # (nEdges, 2*emb_size+nFeatures)
         m_st = self.dense(m_st)  # (nEdges, emb_size)
         return m_st

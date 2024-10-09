@@ -581,7 +581,7 @@ def radius_graph_pbc(
     # index offset between images
     index_offset = (
         torch.cumsum(num_atoms_per_image, dim=0) - num_atoms_per_image
-    )
+    ) # 记录每条数据原子索引开始值
 
     index_offset_expand = torch.repeat_interleave(
         index_offset, num_atoms_per_image_sqr
@@ -608,6 +608,7 @@ def radius_graph_pbc(
 
     # Compute the indices for the pairs of atoms (using division and mod)
     # If the systems get too large this apporach could run into numerical precision issues
+
     index1 = (
         torch.div(
             atom_count_sqr, num_atoms_per_image_expand, rounding_mode="floor"
@@ -616,7 +617,9 @@ def radius_graph_pbc(
     index2 = (
         atom_count_sqr % num_atoms_per_image_expand
     ) + index_offset_expand
+
     # Get the positions for each atom
+
     pos1 = torch.index_select(atom_pos, 0, index1)
     pos2 = torch.index_select(atom_pos, 0, index2)
 
@@ -662,6 +665,7 @@ def radius_graph_pbc(
         torch.arange(-rep, rep + 1, device=device, dtype=torch.float)
         for rep in max_rep
     ]
+
     unit_cell = torch.cartesian_prod(*cells_per_dim)
     num_cells = len(unit_cell)
     unit_cell_per_atom = unit_cell.view(1, num_cells, 3).repeat(

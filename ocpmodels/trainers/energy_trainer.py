@@ -220,9 +220,9 @@ class EnergyTrainer(BaseTrainer):
                 predictions["ids1"].extend(
                     [str(i) for i in batch[0].sid.tolist()]
                 )
-                predictions["ids2"].extend(
-                    [str(i) for i in batch[0].fid.tolist()]
-                )
+                # predictions["ids2"].extend(
+                #     [str(i) for i in batch[0].fid.tolist()]
+                # )
                 predictions["energy"].extend(
                     out["energy"].cpu().detach().numpy()
                 )
