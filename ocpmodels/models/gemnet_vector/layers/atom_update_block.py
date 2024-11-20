@@ -192,6 +192,4 @@ class OutputBlock(AtomUpdateBlock):
             x_F = 0
         # ------------------------------------------------------------------ #
 
-
-
         return x_E, x_F

@@ -257,7 +257,6 @@ class EdgeEmbedding(torch.nn.Module):
         """
         h_s = h[edge_index[0]]  # shape=(nEdges, emb_size)
         h_t = h[edge_index[1]]  # shape=(nEdges, emb_size)
-
         m_st = torch.cat(
             [h_s, h_t, m], dim=-1 # 边的原子特征向量+距离
         )  # (nEdges, 2*emb_size+nFeatures)

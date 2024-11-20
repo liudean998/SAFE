@@ -25,7 +25,6 @@ from ocpmodels.modules.normalizer import Normalizer
 from ocpmodels.modules.scaling.util import ensure_fitted
 from ocpmodels.trainers.base_trainer import BaseTrainer
 
-
 @registry.register_trainer("forces")
 class ForcesTrainer(BaseTrainer):
     """
@@ -157,7 +156,6 @@ class ForcesTrainer(BaseTrainer):
         disable_tqdm: bool = False,
     ) -> Dict[str, npt.NDArray[np.float_]]:
         ensure_fitted(self._unwrapped_model, warn=True)
-
         if distutils.is_master() and not disable_tqdm:
             logging.info("Predicting on test.")
         assert isinstance(
@@ -201,11 +199,17 @@ class ForcesTrainer(BaseTrainer):
                     out["forces"]
                 )
             if per_image:
+                # systemids = [
+                #     str(i) + "_" + str(j)
+                #     for i, j in zip(
+                #         batch_list[0].sid.tolist(), batch_list[0].fid.tolist()
+                #     )
+                # ]
                 systemids = [
-                    str(i) + "_" + str(j)
-                    for i, j in zip(
-                        batch_list[0].sid.tolist(), batch_list[0].fid.tolist()
-                    )
+                    str(i)
+                    for i in
+                        batch_list[0].sid.tolist()
+
                 ]
                 predictions["id"].extend(systemids)
                 batch_natoms = torch.cat(
@@ -311,9 +315,12 @@ class ForcesTrainer(BaseTrainer):
         checkpoint_every = self.config["optim"].get(
             "checkpoint_every", eval_every
         )
+        # primary_metric = self.config["task"].get(
+        #     "primary_metric", self.evaluator.task_primary_metric[self.name]
+        # )
         primary_metric = self.config["task"].get(
-            "primary_metric", self.evaluator.task_primary_metric[self.name]
-        )
+            "primary_metric", self.evaluator.task_primary_metric['is2rs']
+        ) # 修改
         if (
             not hasattr(self, "primary_metric")
             or self.primary_metric != primary_metric
@@ -346,6 +353,17 @@ class ForcesTrainer(BaseTrainer):
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     out = self._forward(batch)
                     loss = self._compute_loss(out, batch)
+                    # out_test = {}
+                    # out_test['positions']=batch[0].pos
+                    # out_test['forces'] = batch[0].pos
+                    # loss_test = self._compute_loss(out_test, batch)
+                    # if loss < 0.1:
+                    #     print(loss, 'loss')
+                    #     print(batch[0].pos[0:10], 'pos')
+                    #     print(batch[0].pos_relaxed[0:10], 'pos_relax')
+                    #     print(out['forces'][0:10])
+                    #     import time
+                    #     time.sleep(10000)
                 loss = self.scaler.scale(loss) if self.scaler else loss
                 self._backward(loss)
                 scale = self.scaler.get_scale() if self.scaler else 1.0
@@ -403,6 +421,7 @@ class ForcesTrainer(BaseTrainer):
                             split="val",
                             disable_tqdm=disable_eval_tqdm,
                         )
+                        # print(primary_metric, val_metrics)
                         self.update_best(
                             primary_metric,
                             val_metrics,
@@ -415,7 +434,6 @@ class ForcesTrainer(BaseTrainer):
                                 self.metrics,
                                 val_metrics,
                             )
-
                     if self.config["task"].get("eval_relaxations", False):
                         if "relax_dataset" not in self.config["task"]:
                             logging.warning(
@@ -466,30 +484,32 @@ class ForcesTrainer(BaseTrainer):
         loss = []
 
         # Energy loss.
-        energy_target = torch.cat(
-            [batch.y.to(self.device) for batch in batch_list], dim=0
-        )
-        if self.normalizer.get("normalize_labels", False):
-            energy_target = self.normalizers["target"].norm(energy_target)
-        energy_mult = self.config["optim"].get("energy_coefficient", 1)
-        loss.append(
-            energy_mult * self.loss_fn["energy"](out["energy"], energy_target)
-        )
-
-        # Force loss.
+        # energy_target = torch.cat(
+        #     [batch.y.to(self.device) for batch in batch_list], dim=0
+        # )
+        # if self.normalizer.get("normalize_labels", False):
+        #     energy_target = self.normalizers["target"].norm(energy_target)
+        # energy_mult = self.config["optim"].get("energy_coefficient", 1)
+        # loss.append(
+        #     energy_mult * self.loss_fn["energy"](out["energy"], energy_target)
+        # )
         if self.config["model_attributes"].get("regress_forces", True):
+            # force_target = torch.cat(
+            #     [batch.force.to(self.device) for batch in batch_list], dim=0
+            # )
             force_target = torch.cat(
-                [batch.force.to(self.device) for batch in batch_list], dim=0
-            )
-            if self.normalizer.get("normalize_labels", False):
-                force_target = self.normalizers["grad_target"].norm(
-                    force_target
-                )
+                [batch.pos_relaxed.to(self.device) for batch in batch_list], dim=0
+            )  # 修改）
+            # if self.normalizer.get("normalize_labels", False):
+            #     force_target = self.normalizers["grad_target"].norm(
+            #         force_target
+            #     )
 
             tag_specific_weights = self.config["task"].get(
                 "tag_specific_weights", []
             )
             if tag_specific_weights != []:
+                print('tag_specific_weights-------------------')
                 # handle tag specific weights as introduced in forcenet
                 assert len(tag_specific_weights) == 3
 
@@ -526,9 +546,9 @@ class ForcesTrainer(BaseTrainer):
                         num_samples, device=self.device
                     )
                     weighted_dists_sum = (
-                        weighted_dists_sum
-                        * distutils.get_world_size()
-                        / num_samples
+                            weighted_dists_sum
+                            * distutils.get_world_size()
+                            / num_samples
                     )
 
                     force_mult = self.config["optim"].get(
@@ -546,9 +566,9 @@ class ForcesTrainer(BaseTrainer):
                     )
                     mask = fixed == 0
                     if (
-                        self.config["optim"]
-                        .get("loss_force", "mae")
-                        .startswith("atomwise")
+                            self.config["optim"]
+                                    .get("loss_force", "mae")
+                                    .startswith("atomwise")
                     ):
                         force_mult = self.config["optim"].get(
                             "force_coefficient", 1
@@ -568,22 +588,151 @@ class ForcesTrainer(BaseTrainer):
                         )
                         loss.append(force_loss)
                     else:
+                        # print(out['forces'].shape)
+                        # print(force_target.shape)
+                        # print('-----------------------------')
+                        # loss.append(
+                        #     force_mult
+                        #     * self.loss_fn["force"](
+                        #         out["forces"][mask],
+                        #         force_target[mask],
+                        #     )       # 原始代码
                         loss.append(
                             force_mult
                             * self.loss_fn["force"](
-                                out["forces"][mask], force_target[mask]
+                                out["forces"][mask],
+                                force_target[mask],
+                                cell=batch_list[0].cell,
+                                ptr=batch_list[0].ptr
                             )
                         )
                 else:
+                    #     force_mult
+                    #     * self.loss_fn["force"](
+                    #         out["forces"][mask],
+                    #         force_target[mask],
+                    #     )       # 原始代码
                     loss.append(
                         force_mult
-                        * self.loss_fn["force"](out["forces"], force_target)
+                        * self.loss_fn["force"](out["forces"],
+                                                force_target,
+                                                batch_list[0].cell,
+                                                batch_list[0].ptr)
                     )
+        # if hasattr(batch_list[0], "pos_relaxed"):
+        #     # Force loss.
+        #     if self.config["model_attributes"].get("regress_forces", True):
+        #         # force_target = torch.cat(
+        #         #     [batch.force.to(self.device) for batch in batch_list], dim=0
+        #         # )
+        #         force_target = torch.cat(
+        #             [batch.pos_relaxed.to(self.device) for batch in batch_list], dim=0
+        #         ) # 修改）
+        #         if self.normalizer.get("normalize_labels", False):
+        #             force_target = self.normalizers["grad_target"].norm(
+        #                 force_target
+        #             )
+        #
+        #         tag_specific_weights = self.config["task"].get(
+        #             "tag_specific_weights", []
+        #         )
+        #         if tag_specific_weights != []:
+        #             # handle tag specific weights as introduced in forcenet
+        #             assert len(tag_specific_weights) == 3
+        #
+        #             batch_tags = torch.cat(
+        #                 [
+        #                     batch.tags.float().to(self.device)
+        #                     for batch in batch_list
+        #                 ],
+        #                 dim=0,
+        #             )
+        #             weight = torch.zeros_like(batch_tags)
+        #             weight[batch_tags == 0] = tag_specific_weights[0]
+        #             weight[batch_tags == 1] = tag_specific_weights[1]
+        #             weight[batch_tags == 2] = tag_specific_weights[2]
+        #
+        #             if self.config["optim"].get("loss_force", "l2mae") == "l2mae":
+        #                 # zero out nans, if any
+        #                 found_nans_or_infs = not torch.all(
+        #                     out["forces"].isfinite()
+        #                 )
+        #                 if found_nans_or_infs is True:
+        #                     logging.warning("Found nans while computing loss")
+        #                     out["forces"] = torch.nan_to_num(
+        #                         out["forces"], nan=0.0
+        #                     )
+        #
+        #                 dists = torch.norm(
+        #                     out["forces"] - force_target, p=2, dim=-1
+        #                 )
+        #                 weighted_dists_sum = (dists * weight).sum()
+        #
+        #                 num_samples = out["forces"].shape[0]
+        #                 num_samples = distutils.all_reduce(
+        #                     num_samples, device=self.device
+        #                 )
+        #                 weighted_dists_sum = (
+        #                     weighted_dists_sum
+        #                     * distutils.get_world_size()
+        #                     / num_samples
+        #                 )
+        #
+        #                 force_mult = self.config["optim"].get(
+        #                     "force_coefficient", 30
+        #                 )
+        #                 loss.append(force_mult * weighted_dists_sum)
+        #             else:
+        #                 raise NotImplementedError
+        #         else:
+        #             # Force coefficient = 30 has been working well for us.
+        #             force_mult = self.config["optim"].get("force_coefficient", 30)
+        #             if self.config["task"].get("train_on_free_atoms", False):
+        #                 fixed = torch.cat(
+        #                     [batch.fixed.to(self.device) for batch in batch_list]
+        #                 )
+        #                 mask = fixed == 0
+        #                 if (
+        #                     self.config["optim"]
+        #                     .get("loss_force", "mae")
+        #                     .startswith("atomwise")
+        #                 ):
+        #                     force_mult = self.config["optim"].get(
+        #                         "force_coefficient", 1
+        #                     )
+        #                     natoms = torch.cat(
+        #                         [
+        #                             batch.natoms.to(self.device)
+        #                             for batch in batch_list
+        #                         ]
+        #                     )
+        #                     natoms = torch.repeat_interleave(natoms, natoms)
+        #                     force_loss = force_mult * self.loss_fn["force"](
+        #                         out["forces"][mask],
+        #                         force_target[mask],
+        #                         natoms=natoms[mask],
+        #                         batch_size=batch_list[0].natoms.shape[0],
+        #                     )
+        #                     loss.append(force_loss)
+        #                 else:
+        #                     # print(out['forces'].shape)
+        #                     # print(force_target.shape)
+        #                     # print('-----------------------------')
+        #                     loss.append(
+        #                         force_mult
+        #                         * self.loss_fn["force"](
+        #                             out["forces"][mask], force_target[mask]
+        #                         )
+        #                     )
+        #             else:
+        #                 loss.append(
+        #                     force_mult
+        #                     * self.loss_fn["force"](out["forces"], force_target)
+        #                 )
 
         # Sanity check to make sure the compute graph is correct.
         for lc in loss:
             assert hasattr(lc, "grad_fn")
-
         loss = sum(loss)
         return loss
 
@@ -627,7 +776,15 @@ class ForcesTrainer(BaseTrainer):
             out["forces"] = self.normalizers["grad_target"].denorm(
                 out["forces"]
             )
+        # 修改---为了满足is2rs的数据需求
+        target['positions'] = target['forces']
+        target['cell'] = batch_list[0].cell
+        target['pbc'] = torch.tensor([True, True, True], dtype=torch.bool)
 
+        out['positions'] = out['forces']
+        out['cell'] = batch_list[0].cell
+        out['pbc'] = torch.tensor([True, True, True], dtype=torch.bool)
+        # ---------------------------
         metrics = evaluator.eval(out, target, prev_metrics=metrics)
         return metrics
 

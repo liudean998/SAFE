@@ -1,5 +1,5 @@
 includes:
-  - configs/s2ef/2M/base-energy.yml
+  - configs/is2rs/2M/base-energy.yml
 
 model:
   name: gemnet_oc
@@ -7,7 +7,6 @@ model:
   num_radial: 128
   num_blocks: 4
   emb_size_atom: 256
-#  emb_size_atom: 384 # 256+128其中128为原子标签信息
   emb_size_edge: 512
   emb_size_trip_in: 64
   emb_size_trip_out: 64
@@ -45,9 +44,9 @@ model:
   activation: silu
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
-  regress_forces: True
-#  regress_forces: False
-  direct_forces: True
+#  regress_forces: True
+  regress_forces: False
+  direct_forces: Flase
   forces_coupled: False
 
   quad_interaction: False
@@ -75,14 +74,12 @@ optim:
   factor: 0.8
   patience: 3
   max_epochs: 100
-#  force_coefficient: 100
-  force_coefficient: 1
+  force_coefficient: 100
   energy_coefficient: 1
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
   loss_force: l2mae
-#  loss_force: min_dist
   weight_decay: 0
 #  weight_decay: 0.1
 #  T_max: 2000000 # for CosineAnnealingLR

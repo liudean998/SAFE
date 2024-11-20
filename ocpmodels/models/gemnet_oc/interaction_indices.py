@@ -137,7 +137,6 @@ def get_mixed_triplets(
     # Edge indices (b->a, c->a) for triplets.
     idx_in = adj_edges.storage.value()
     idx_out = adj_edges.storage.row()
-
     # Remove self-loop triplets c->a<-c or c<-a<-c
     # Check atom as well as cell offset
     if to_outedge:

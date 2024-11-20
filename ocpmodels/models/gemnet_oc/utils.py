@@ -21,7 +21,6 @@ def ragged_range(sizes):
     assert sizes.dim() == 1
     if sizes.sum() == 0:
         return sizes.new_empty(0)
-
     # Remove 0 sizes
     sizes_nonzero = sizes > 0
     if not torch.all(sizes_nonzero):
@@ -405,6 +404,7 @@ def get_inner_idx(idx, dim_size):
     idx has to be sorted for this to work.
     """
     ones = idx.new_ones(1).expand_as(idx)
+    idx = torch.sort(idx)[0]
     num_neighbors = segment_coo(ones, idx, dim_size=dim_size)
     inner_idx = ragged_range(num_neighbors)
     return inner_idx

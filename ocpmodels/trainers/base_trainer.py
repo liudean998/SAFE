@@ -43,7 +43,7 @@ from ocpmodels.modules.evaluator import Evaluator
 from ocpmodels.modules.exponential_moving_average import (
     ExponentialMovingAverage,
 )
-from ocpmodels.modules.loss import AtomwiseL2Loss, DDPLoss, L2MAELoss
+from ocpmodels.modules.loss import AtomwiseL2Loss, DDPLoss, L2MAELoss, MinDist
 from ocpmodels.modules.normalizer import Normalizer
 from ocpmodels.modules.scaling.compat import load_scales_compat
 from ocpmodels.modules.scaling.util import ensure_fitted
@@ -212,7 +212,8 @@ class BaseTrainer(ABC):
             print(yaml.dump(self.config, default_flow_style=False))
         self.load()
 
-        self.evaluator = Evaluator(task=name)
+        # self.evaluator = Evaluator(task=name)
+        self.evaluator = Evaluator(task='is2rs')
 
     def load(self) -> None:
         self.load_seed_from_config()
@@ -491,6 +492,8 @@ class BaseTrainer(ABC):
                 self.loss_fn[loss] = L2MAELoss()
             elif loss_name == "atomwisel2":
                 self.loss_fn[loss] = AtomwiseL2Loss()
+            elif loss_name == 'min_dist':
+                self.loss_fn[loss] = MinDist()
             else:
                 raise NotImplementedError(
                     f"Unknown loss function name: {loss_name}"
@@ -662,7 +665,9 @@ class BaseTrainer(ABC):
             self.ema.store()
             self.ema.copy_to()
 
-        evaluator, metrics = Evaluator(task=self.name), {}
+        # evaluator, metrics = Evaluator(task=self.name), {}
+        # 修改
+        evaluator, metrics = Evaluator(task='is2rs'), {}
         rank = distutils.get_rank()
 
         loader = self.val_loader if split == "val" else self.test_loader
@@ -826,11 +831,17 @@ class BaseTrainer(ABC):
             f"{self.name}_{results_file}_{distutils.get_rank()}.npz",
         )
 
-        # 保存 ids1 和 ids2 而不是单个 id
+        # # 保存 ids1 和 ids2 而不是单个 id
+        # np.savez_compressed(
+        #     results_file_path,
+        #     ids1=predictions["ids1"],
+        #     # ids2=predictions["ids2"],
+        #     **{key: predictions[key] for key in keys},
+        # )
+
         np.savez_compressed(
             results_file_path,
-            ids1=predictions["ids1"],
-            # ids2=predictions["ids2"],
+            ids=predictions["id"],
             **{key: predictions[key] for key in keys},
         )
 
@@ -848,7 +859,8 @@ class BaseTrainer(ABC):
                     f"{self.name}_{results_file}_{i}.npz",
                 )
                 rank_results = np.load(rank_path, allow_pickle=True)
-                gather_results["ids1"].extend(rank_results["ids1"])
+                gather_results["ids"].extend(rank_results["ids"])
+                # gather_results["ids1"].extend(rank_results["ids1"])
                 # gather_results["ids2"].extend(rank_results["ids2"])
                 for key in keys:
                     if key.find("forces") >= 0:
@@ -860,9 +872,11 @@ class BaseTrainer(ABC):
 
             # 处理重复的问题
             # combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
-            combined_ids = gather_results["ids1"]
+            # combined_ids = gather_results["ids1"]
+            combined_ids = gather_results["ids"]
             _, idx = np.unique(combined_ids, return_index=True)
-            gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
+            # gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
+            gather_results["ids"] = np.array(gather_results["ids"])[idx]
             # gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
             for k in keys:
                 if k.find("forces") >= 0:

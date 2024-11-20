@@ -28,10 +28,12 @@ class Runner(submitit.helpers.Checkpointable):
 
     def __call__(self, config) -> None:
         with new_trainer_context(args=args, config=config) as ctx:
+            print(ctx)
+            import time
+            time.sleep(10000)
             self.config = ctx.config
             self.task = ctx.task
             self.trainer = ctx.trainer
-
             self.task.setup(self.trainer)
             self.task.run()
 
@@ -53,7 +55,6 @@ if __name__ == "__main__":
     override_args: List[str]
     args, override_args = parser.parse_known_args()
     config = build_config(args, override_args)
-
     if args.submit:  # Run on cluster
         slurm_add_params = config.get(
             "slurm", None
