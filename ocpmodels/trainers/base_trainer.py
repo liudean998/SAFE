@@ -43,7 +43,7 @@ from ocpmodels.modules.evaluator import Evaluator
 from ocpmodels.modules.exponential_moving_average import (
     ExponentialMovingAverage,
 )
-from ocpmodels.modules.loss import AtomwiseL2Loss, DDPLoss, L2MAELoss, MinDist
+from ocpmodels.modules.loss import AtomwiseL2Loss, DDPLoss, L2MAELoss, MaeV, MseV
 from ocpmodels.modules.normalizer import Normalizer
 from ocpmodels.modules.scaling.compat import load_scales_compat
 from ocpmodels.modules.scaling.util import ensure_fitted
@@ -212,8 +212,7 @@ class BaseTrainer(ABC):
             print(yaml.dump(self.config, default_flow_style=False))
         self.load()
 
-        # self.evaluator = Evaluator(task=name)
-        self.evaluator = Evaluator(task='is2rs')
+        self.evaluator = Evaluator(task=name)
 
     def load(self) -> None:
         self.load_seed_from_config()
@@ -482,7 +481,9 @@ class BaseTrainer(ABC):
         self.loss_fn: Dict[str, str] = {
             "energy": self.config["optim"].get("loss_energy", "mae"),
             "force": self.config["optim"].get("loss_force", "mae"),
+            "pos": self.config["optim"].get("loss_pos", "mae")
         }
+
         for loss, loss_name in self.loss_fn.items():
             if loss_name in ["l1", "mae"]:
                 self.loss_fn[loss] = nn.L1Loss()
@@ -492,8 +493,10 @@ class BaseTrainer(ABC):
                 self.loss_fn[loss] = L2MAELoss()
             elif loss_name == "atomwisel2":
                 self.loss_fn[loss] = AtomwiseL2Loss()
-            elif loss_name == 'min_dist':
-                self.loss_fn[loss] = MinDist()
+            elif loss_name == 'mae_v':
+                self.loss_fn[loss] = MaeV()
+            elif loss_name == 'mse_v':
+                self.loss_fn[loss] = MseV()
             else:
                 raise NotImplementedError(
                     f"Unknown loss function name: {loss_name}"

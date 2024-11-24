@@ -28,9 +28,6 @@ class Runner(submitit.helpers.Checkpointable):
 
     def __call__(self, config) -> None:
         with new_trainer_context(args=args, config=config) as ctx:
-            print(ctx)
-            import time
-            time.sleep(10000)
             self.config = ctx.config
             self.task = ctx.task
             self.trainer = ctx.trainer

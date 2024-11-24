@@ -27,7 +27,6 @@ from typing import Any, Callable, Dict, List, TypeVar, Union
 R = TypeVar("R")
 NestedDict = Dict[str, Union[str, Callable[..., Any], "NestedDict"]]
 
-
 def _get_absolute_mapping(name: str):
     # in this case, the `name` should be the fully qualified name of the class
     # e.g., `ocpmodels.tasks.base_task.BaseTask`

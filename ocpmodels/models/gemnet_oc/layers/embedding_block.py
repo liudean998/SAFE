@@ -284,7 +284,7 @@ class AtomEmbeddingTags(torch.nn.Module):
         torch.nn.init.uniform_(
             self.embeddings.weight, a=-np.sqrt(3), b=np.sqrt(3)
         )
-        self.embeddings_tags = torch.nn.Embedding(3, 128)
+        self.embeddings_tags = torch.nn.Embedding(5, 128)
         # init by uniform distribution
         torch.nn.init.uniform_(
             self.embeddings_tags.weight, a=-np.sqrt(3), b=np.sqrt(3)

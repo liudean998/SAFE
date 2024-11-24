@@ -120,6 +120,7 @@ class OutputBlock(AtomUpdateBlock):
         nHidden_afteratom: int,
         activation: Optional[str] = None,
         direct_forces: bool = True,
+        update_pos: bool = True # 修改
     ) -> None:
         super().__init__(
             emb_size_atom=emb_size_atom,
@@ -130,6 +131,7 @@ class OutputBlock(AtomUpdateBlock):
         )
 
         self.direct_forces = direct_forces
+        self.update_pos = update_pos
 
         self.seq_energy_pre = self.layers  # inherited from parent class
         if nHidden_afteratom >= 1:
@@ -148,8 +150,14 @@ class OutputBlock(AtomUpdateBlock):
             self.dense_rbf_F = Dense(
                 emb_size_rbf, emb_size_edge, activation=None, bias=False
             )
+        if self.update_pos:
+            self.seq_pos = self.get_mlp(emb_size_edge, emb_size_edge,
+                                           nHidden, activation)
+            self.dense_rbf_P = Dense(
+                emb_size_rbf, emb_size_edge, activation=None, bias=False
+            )
 
-    def forward(self, h: torch.Tensor, m: torch.Tensor, basis_rad, idx_atom):
+    def forward(self, h: torch.Tensor, m: torch.Tensor, basis_rad, idx_atom, mask=None):
         """
         Returns
         -------
@@ -190,8 +198,13 @@ class OutputBlock(AtomUpdateBlock):
             x_F = self.scale_rbf_F(x_F_basis, ref=x_F)
         else:
             x_F = 0
-        # ------------------------------------------------------------------ #
+        # -----------------------Positions 修改部分------------------------------ #
+        if self.update_pos:
+            basis_emb_P = self.dense_rbf_P(basis_rad)
+            x_P = m[mask] * basis_emb_P[mask] # (nEdges, emb_size_edge)
+            for _, layer in enumerate(self.seq_pos):
+                x_P = layer(x_P)
+        else:
+            x_P = 0
 
-
-
-        return x_E, x_F
+        return x_E, x_F, x_P

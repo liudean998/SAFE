@@ -42,23 +42,29 @@ class Evaluator:
             "energy_mae",
             "energy_force_within_threshold",
         ],
+        # "is2rs": [
+        #     "average_distance_within_threshold",
+        #     "positions_mae",
+        #     "positions_mse",
+        # ],
         "is2rs": [
-            "average_distance_within_threshold",
-            "positions_mae",
-            "positions_mse",
-        ],
+            "pos_mae",
+            "pos_mse",
+        ], # 修改
         "is2re": ["energy_mae", "energy_mse", "energy_within_threshold"],
     }
 
     task_attributes = {
         "s2ef": ["energy", "forces", "natoms"],
-        "is2rs": ["positions", "cell", "pbc", "natoms"],
+        # "is2rs": ["positions", "cell", "pbc", "natoms"],
+        "is2rs": ["pos"], # 修改
         "is2re": ["energy"],
     }
 
     task_primary_metric = {
         "s2ef": "energy_force_within_threshold",
-        "is2rs": "average_distance_within_threshold",
+        # "is2rs": "average_distance_within_threshold",
+        "is2rs": "pos_mae", # 修改
         "is2re": "energy_mae",
     }
 
@@ -163,6 +169,13 @@ def positions_mae(prediction, target):
 
 def positions_mse(prediction, target):
     return squared_error(prediction["positions"], target["positions"])
+
+# 修改-增加
+def pos_mae(prediction, target):
+    return absolute_error(prediction["pos"], target["pos"])
+# 修改-增加
+def pos_mse(prediction, target):
+    return squared_error(prediction["pos"], target["pos"])
 
 
 def energy_force_within_threshold(

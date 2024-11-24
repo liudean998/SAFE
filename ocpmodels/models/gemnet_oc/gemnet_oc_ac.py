@@ -327,6 +327,8 @@ class GemNetOC(BaseModel):
             # num_heads: int = 16,
             # num_layers: int = 1,
             # final_emb_size: int = 256,
+            # 训练pos的参数
+            update_pos: bool = False,
             **kwargs,  # backwards compatibility with deprecated arguments
     ) -> None:
         super().__init__()
@@ -360,6 +362,8 @@ class GemNetOC(BaseModel):
         self.forces_coupled = forces_coupled
         self.regress_forces = regress_forces
         self.force_scaler = ForceScaler(enabled=scale_backprop_forces)
+
+        self.update_pos = update_pos
 
         self.init_basis_functions(
             num_radial,
@@ -424,6 +428,7 @@ class GemNetOC(BaseModel):
                     nHidden_afteratom=num_output_afteratom,
                     activation=activation,
                     direct_forces=direct_forces,
+                    update_pos=update_pos, # 修改
                 )
             )
         self.out_blocks = torch.nn.ModuleList(out_blocks)
@@ -467,11 +472,30 @@ class GemNetOC(BaseModel):
             self.out_forces = Dense(
                 emb_size_edge, num_targets, bias=False, activation=None
             )
-
+        if self.update_pos:
+            out_mlp_P = [
+                            Dense(
+                                emb_size_edge * (num_blocks + 1),
+                                emb_size_edge,
+                                activation=activation,
+                            )
+                        ] + [
+                            ResidualLayer(
+                                emb_size_edge,
+                                activation=activation,
+                            )
+                            for _ in range(num_global_out_layers)
+                        ]
+            self.out_mlp_P = torch.nn.Sequential(*out_mlp_P)
+            self.out_pos = Dense(
+                emb_size_edge, 3, bias=False, activation=None
+            )
         out_initializer = get_initializer(output_init)
         self.out_energy.reset_parameters(out_initializer)
         if direct_forces:
             self.out_forces.reset_parameters(out_initializer)
+        if update_pos:
+            self.out_pos.reset_parameters(out_initializer)
 
         load_scales_compat(self, scale_file)
         # 卷积
@@ -568,6 +592,13 @@ class GemNetOC(BaseModel):
             envelope=envelope,
             scale_basis=scale_basis,
         )
+        self.radial_basis_main = RadialBasis(
+            num_radial=int(num_radial/3),
+            cutoff=self.cutoff,
+            rbf=rbf,
+            envelope=envelope,
+            scale_basis=scale_basis,
+        ) # 修改
         radial_basis_spherical = RadialBasis(
             num_radial=num_radial,
             cutoff=self.cutoff,
@@ -1511,7 +1542,15 @@ class GemNetOC(BaseModel):
     ):
         """Calculate and transform basis functions."""
         basis_rad_main_raw = self.radial_basis(main_graph["distance"])
-
+        # 修改-增加
+        vector = main_graph["vector"]
+        vector = vector.view(-1)
+        basis_rad_main_raw_v = self.radial_basis_main(vector)
+        size = basis_rad_main_raw_v.shape
+        # print(size)
+        basis_rad_main_raw_v = basis_rad_main_raw_v.view(int(size[0]/3),
+                                                         size[1]*3)
+        # -------
         # Calculate triplet angles
         cosφ_cab = inner_product_clamped(
             main_graph["vector"][trip_idx_e2e["out"]],
@@ -1627,6 +1666,7 @@ class GemNetOC(BaseModel):
             bases_a2e,
             bases_e2a,
             basis_a2a_rad,
+            basis_rad_main_raw_v # 修改--增加
         )
 
     # @conditional_grad(torch.enable_grad())
@@ -2226,6 +2266,8 @@ class GemNetOC(BaseModel):
         # --------------------输出修改为pos更新量----------------------------------
         pos = data.pos
         batch = data.batch
+        tags = data.tags
+        tags1 = data.tags1
         atomic_numbers = data.atomic_numbers.long()
         num_atoms = atomic_numbers.shape[0]
 
@@ -2254,6 +2296,7 @@ class GemNetOC(BaseModel):
             bases_a2e,
             bases_e2a,
             basis_a2a_rad,
+            basis_rad_raw_v # 修改-增加
         ) = self.get_bases(
             main_graph=main_graph,
             a2a_graph=a2a_graph,
@@ -2265,16 +2308,33 @@ class GemNetOC(BaseModel):
             quad_idx=quad_idx,
             num_atoms=num_atoms,
         )
-
         # Embedding block
-        h = self.atom_emb(atomic_numbers)
+        h = self.atom_emb_tags(atomic_numbers, tags)
         # (nAtoms, emb_size_atom)
-        m = self.edge_emb(h, basis_rad_raw, main_graph["edge_index"])
-        # (nEdges, emb_size_edge)
+        m = self.edge_emb(h, basis_rad_raw_v, main_graph["edge_index"])
+        # 获取tags3和4之间的vector,cell_offset=0
+        sum_off = torch.sum(torch.abs(main_graph['cell_offset']), dim=1)
+        tags3 = torch.where(tags1==3)[0]
+        tags4 = torch.where(tags1==4)[0]
+        src, dst = main_graph['edge_index']
+        # 条件1: 起点的标签属于 tags3
+        cond1 = torch.isin(src, tags3)
+        # 条件2: 终点的标签属于 tags4
+        cond2 = torch.isin(dst, tags4)
+        # 条件3: sum_off 的值为 0
+        cond3 = (sum_off == 0)
+        # 结合所有条件，生成一个布尔掩码
+        mask = cond1 & cond2 & cond3
+        # mask_0 = cond1 & cond2
+        # print(data.pos, 'pos')
+        # print(data.cell, 'cell')
+        # print(data.tags, 'tags')
+        # print(data.atomic_numbers, 'atomic')
 
-        x_E, x_F = self.out_blocks[0](h, m, basis_output, idx_t)
-        # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-        xs_E, xs_F = [x_E], [x_F]
+        # (nEdges, emb_size_edge)
+        x_E, x_F, x_P = self.out_blocks[0](h, m, basis_output, idx_t, mask=mask)
+        # (nEdges, emb_size_edge)
+        xs_P = [x_P]
 
         for i in range(self.num_blocks):
             # Interaction block
@@ -2297,66 +2357,20 @@ class GemNetOC(BaseModel):
                 quad_idx=quad_idx,
             )  # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
 
-            x_E, x_F = self.out_blocks[i + 1](h, m, basis_output, idx_t)
+            x_E, x_F, x_P = self.out_blocks[i + 1](h, m, basis_output, idx_t, mask=mask)
             # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-            xs_E.append(x_E)
-            xs_F.append(x_F)
+            xs_P.append(x_P)
         # Global output block for final predictions
-        x_E = self.out_mlp_E(torch.cat(xs_E, dim=-1))
-        if self.direct_forces:
-            x_F = self.out_mlp_F(torch.cat(xs_F, dim=-1))
-        with torch.cuda.amp.autocast(False):
-            E_t = self.out_energy(x_E.float())
-            if self.direct_forces:
-                F_st = self.out_forces(x_F.float())
-
-        nMolecules = torch.max(batch) + 1
-        if self.extensive:
-            E_t = scatter_det(
-                E_t, batch, dim=0, dim_size=nMolecules, reduce="add"
-            )  # (nMolecules, num_targets)
+        if self.update_pos:
+            x_P = self.out_mlp_P(torch.cat(xs_P, dim=-1))
+            P_t = self.out_pos(x_P)
+            # P_t = P_t.squeeze(1) # batch 3
+            V_t = P_t.squeeze(1) # batch 3
+            # vector = main_graph['vector'][mask]
+            # V_t = vector + P_t
+            return V_t
         else:
-            E_t = scatter_det(
-                E_t, batch, dim=0, dim_size=nMolecules, reduce="mean"
-            )  # (nMolecules, num_targets)
-
-        if self.regress_forces:
-            if self.direct_forces:
-                if self.forces_coupled:  # enforce F_st = F_ts
-                    nEdges = idx_t.shape[0]
-                    id_undir = repeat_blocks(
-                        main_graph["num_neighbors"] // 2,
-                        repeats=2,
-                        continuous_indexing=True,
-                    )
-                    F_st = scatter_det(
-                        F_st,
-                        id_undir,
-                        dim=0,
-                        dim_size=int(nEdges / 2),
-                        reduce="mean",
-                    )  # (nEdges/2, num_targets)
-                    F_st = F_st[id_undir]  # (nEdges, num_targets)
-
-                # map forces in edge directions
-                F_st_vec = F_st[:, :, None] * main_graph["vector"][:, None, :]
-                # (nEdges, num_targets, 3)
-                F_t = scatter_det(
-                    F_st_vec,
-                    idx_t,
-                    dim=0,
-                    dim_size=num_atoms,
-                    reduce="add",
-                )  # (nAtoms, num_targets, 3)
-            else:
-                F_t = self.force_scaler.calc_forces_and_update(E_t, pos)
-            E_t = E_t.squeeze(1)  # (num_molecules)
-            # F_t = F_t.squeeze(1)  # (num_atoms, 3)
-            F_t = pos + F_t.squeeze(1)  # (num_atoms, 3)
-            return E_t, F_t
-        else:
-            E_t = E_t.squeeze(1)  # (num_molecules)
-            return E_t
+            return 0
 
     # @conditional_grad(torch.enable_grad())
     # def forward(self, data):
