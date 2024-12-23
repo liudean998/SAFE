@@ -609,6 +609,7 @@ class ForcesTrainer(BaseTrainer):
                 [batch.fixed.to(self.device) for batch in batch_list]
             )
             mask = fixed == 0
+
             out["forces"] = out["forces"][mask]
             target["forces"] = target["forces"][mask]
 
@@ -627,7 +628,6 @@ class ForcesTrainer(BaseTrainer):
             out["forces"] = self.normalizers["grad_target"].denorm(
                 out["forces"]
             )
-
         metrics = evaluator.eval(out, target, prev_metrics=metrics)
         return metrics
 

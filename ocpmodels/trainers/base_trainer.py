@@ -354,13 +354,13 @@ class BaseTrainer(ABC):
                     std=self.normalizer["target_std"],
                     device=self.device,
                 )
-            else:
-                self.normalizers["target"] = Normalizer(
-                    tensor=self.train_loader.dataset.data.y[
-                        self.train_loader.dataset.__indices__
-                    ],
-                    device=self.device,
-                )
+            # else:
+            #     self.normalizers["target"] = Normalizer(
+            #         tensor=self.train_loader.dataset.data.y[
+            #             self.train_loader.dataset.__indices__
+            #         ],
+            #         device=self.device,
+            #     )
 
     @abstractmethod
     def load_task(self):
@@ -481,7 +481,7 @@ class BaseTrainer(ABC):
         self.loss_fn: Dict[str, str] = {
             "energy": self.config["optim"].get("loss_energy", "mae"),
             "force": self.config["optim"].get("loss_force", "mae"),
-            "pos": self.config["optim"].get("loss_pos", "mae")
+            "vector": self.config["optim"].get("loss_vector", "mae")
         }
 
         for loss, loss_name in self.loss_fn.items():
@@ -501,7 +501,7 @@ class BaseTrainer(ABC):
                 raise NotImplementedError(
                     f"Unknown loss function name: {loss_name}"
                 )
-            self.loss_fn[loss] = DDPLoss(self.loss_fn[loss])
+            self.loss_fn[loss] = DDPLoss(self.loss_fn[loss], loss_name=loss_name)
 
     def load_optimizer(self) -> None:
         optimizer = self.config["optim"].get("optimizer", "AdamW")
@@ -668,9 +668,7 @@ class BaseTrainer(ABC):
             self.ema.store()
             self.ema.copy_to()
 
-        # evaluator, metrics = Evaluator(task=self.name), {}
-        # 修改
-        evaluator, metrics = Evaluator(task='is2rs'), {}
+        evaluator, metrics = Evaluator(task=self.name), {}
         rank = distutils.get_rank()
 
         loader = self.val_loader if split == "val" else self.test_loader
@@ -842,57 +840,58 @@ class BaseTrainer(ABC):
         #     **{key: predictions[key] for key in keys},
         # )
 
+        logging.info(f"Writing results to {results_file_path}")
         np.savez_compressed(
             results_file_path,
             ids=predictions["id"],
             **{key: predictions[key] for key in keys},
         )
 
-        distutils.synchronize()
-        if distutils.is_master():
-            gather_results = defaultdict(list)
-            full_path = os.path.join(
-                self.config["cmd"]["results_dir"],
-                f"{self.name}_{results_file}.npz",
-            )
-
-            for i in range(distutils.get_world_size()):
-                rank_path = os.path.join(
-                    self.config["cmd"]["results_dir"],
-                    f"{self.name}_{results_file}_{i}.npz",
-                )
-                rank_results = np.load(rank_path, allow_pickle=True)
-                gather_results["ids"].extend(rank_results["ids"])
-                # gather_results["ids1"].extend(rank_results["ids1"])
-                # gather_results["ids2"].extend(rank_results["ids2"])
-                for key in keys:
-                    if key.find("forces") >= 0:
-                        gather_results[key].extend(
-                            np.array_split(rank_results[key], np.cumsum(rank_results['chunk_idx'])[: -1]))
-                    else:
-                        gather_results[key].extend(rank_results[key])
-                os.remove(rank_path)
-
-            # 处理重复的问题
-            # combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
-            # combined_ids = gather_results["ids1"]
-            combined_ids = gather_results["ids"]
-            _, idx = np.unique(combined_ids, return_index=True)
-            # gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
-            gather_results["ids"] = np.array(gather_results["ids"])[idx]
-            # gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
-            for k in keys:
-                if k.find("forces") >= 0:
-                    gather_results[k] = np.concatenate(
-                        [gather_results[k][idx_i] for idx_i in idx]
-                    )
-                elif k == "chunk_idx":
-                    gather_results[k] = np.cumsum(
-                        np.array(gather_results[k])[idx]
-                    )[:-1]
-                else:
-                    gather_results[k] = np.array(gather_results[k])[idx]
-
-            logging.info(f"Writing results to {full_path}")
-            np.savez_compressed(full_path, **gather_results)
+        # distutils.synchronize()
+        # if distutils.is_master():
+        #     gather_results = defaultdict(list)
+        #     full_path = os.path.join(
+        #         self.config["cmd"]["results_dir"],
+        #         f"{self.name}_{results_file}.npz",
+        #     )
+        #
+        #     for i in range(distutils.get_world_size()):
+        #         rank_path = os.path.join(
+        #             self.config["cmd"]["results_dir"],
+        #             f"{self.name}_{results_file}_{i}.npz",
+        #         )
+        #         rank_results = np.load(rank_path, allow_pickle=True)
+        #         gather_results["ids"].extend(rank_results["ids"])
+        #         # gather_results["ids1"].extend(rank_results["ids1"])
+        #         # gather_results["ids2"].extend(rank_results["ids2"])
+        #         for key in keys:
+        #             if key.find("forces") >= 0:
+        #                 gather_results[key].extend(
+        #                     np.array_split(rank_results[key], np.cumsum(rank_results['chunk_idx'])[: -1]))
+        #             else:
+        #                 gather_results[key].extend(rank_results[key])
+        #         os.remove(rank_path)
+        #     # 暂时修改
+        #     print(gather_results, 'rrrrr')
+        #     # # 处理重复的问题
+        #     # # combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
+        #     # # combined_ids = gather_results["ids1"]
+        #     # combined_ids = gather_results["ids"]
+        #     # _, idx = np.unique(combined_ids, return_index=True)
+        #     # # gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
+        #     # gather_results["ids"] = np.array(gather_results["ids"])[idx]
+        #     # # gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
+        #     # for k in keys:
+        #     #     if k.find("forces") >= 0:
+        #     #         gather_results[k] = np.concatenate(
+        #     #             [gather_results[k][idx_i] for idx_i in idx]
+        #     #         )
+        #     #     elif k == "chunk_idx":
+        #     #         gather_results[k] = np.cumsum(
+        #     #             np.array(gather_results[k])[idx]
+        #     #         )[:-1]
+        #     #     else:
+        #     #         gather_results[k] = np.array(gather_results[k])[idx]
+        #     logging.info(f"Writing results to {full_path}")
+        #     np.savez_compressed(full_path, **gather_results)
 

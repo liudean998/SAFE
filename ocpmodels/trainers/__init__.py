@@ -7,10 +7,11 @@ __all__ = [
     "BaseTrainer",
     "ForcesTrainer",
     "EnergyTrainer",
-    'PosTrainer'
+    'Is2RvTrainer',
+    'Is2RveTrainer'
 ]
 
 from .base_trainer import BaseTrainer
 from .energy_trainer import EnergyTrainer
 from .forces_trainer import ForcesTrainer
-from .pos_trainer import PosTrainer
+from .is2rv_trainer import  Is2RvTrainer, Is2RveTrainer

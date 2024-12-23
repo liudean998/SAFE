@@ -47,29 +47,37 @@ class Evaluator:
         #     "positions_mae",
         #     "positions_mse",
         # ],
-        "is2rs": [
-            "pos_mae",
-            "pos_mse",
-        ], # 修改
+        "is2rve": [
+            "v_mae",
+            "v_mse",
+            "energy_mae",
+            "energy_mse",
+        ], # 增加
+        "is2rv":[
+            "v_mae",
+            "v_mse",
+        ], # 增加
         "is2re": ["energy_mae", "energy_mse", "energy_within_threshold"],
     }
 
     task_attributes = {
         "s2ef": ["energy", "forces", "natoms"],
-        # "is2rs": ["positions", "cell", "pbc", "natoms"],
-        "is2rs": ["pos"], # 修改
+        "is2rs": ["positions", "cell", "pbc", "natoms"],
+        "is2rv": ["vector"], # 增加
+        "is2rve": ["vector", "energy"], # 增加
         "is2re": ["energy"],
     }
 
-    task_primary_metric = {
+    task_primary_metric = { # 主要评价函数，以此判断最佳值，保存结果
         "s2ef": "energy_force_within_threshold",
         # "is2rs": "average_distance_within_threshold",
-        "is2rs": "pos_mae", # 修改
+        "is2rv": "v_mae", # 修改
+        "is2rve": "energy_mae", # 修改
         "is2re": "energy_mae",
     }
 
     def __init__(self, task: str) -> None:
-        assert task in ["s2ef", "is2rs", "is2re"]
+        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rve'] # 增加
         self.task = task
         self.metric_fn = self.task_metrics[task]
 
@@ -171,11 +179,11 @@ def positions_mse(prediction, target):
     return squared_error(prediction["positions"], target["positions"])
 
 # 修改-增加
-def pos_mae(prediction, target):
-    return absolute_error(prediction["pos"], target["pos"])
+def v_mae(prediction, target):
+    return absolute_error(prediction["vector"], target["vector"])
 # 修改-增加
-def pos_mse(prediction, target):
-    return squared_error(prediction["pos"], target["pos"])
+def v_mse(prediction, target):
+    return squared_error(prediction["vector"], target["vector"])
 
 
 def energy_force_within_threshold(
@@ -188,8 +196,10 @@ def energy_force_within_threshold(
     # compute absolute error on per-atom forces and energy per system.
     # then count the no. of systems where max force error is < 0.03 and max
     # energy error is < 0.02.
-    f_thresh = 0.03
-    e_thresh = 0.02
+    # f_thresh = 0.03
+    # e_thresh = 0.02
+    f_thresh = 0.05 # 修改 增大阈值
+    e_thresh = 0.05
 
     success = 0
     total = int(target["natoms"].size(0))

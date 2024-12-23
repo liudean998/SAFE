@@ -103,78 +103,12 @@ class EnergyTrainer(BaseTrainer):
         self.num_targets = 1
 
     @torch.no_grad()
-    # def predict(
-    #     self,
-    #     loader,
-    #     per_image: bool = True,
-    #     results_file=None,
-    #     disable_tqdm: bool = False,
-    # ):
-    #     ensure_fitted(self._unwrapped_model)
-    #
-    #     if distutils.is_master() and not disable_tqdm:
-    #         logging.info("Predicting on test.")
-    #     assert isinstance(
-    #         loader,
-    #         (
-    #             torch.utils.data.dataloader.DataLoader,
-    #             torch_geometric.data.Batch,
-    #         ),
-    #     )
-    #     rank = distutils.get_rank()
-    #
-    #     if isinstance(loader, torch_geometric.data.Batch):
-    #         loader = [[loader]]
-    #
-    #     self.model.eval()
-    #     if self.ema:
-    #         self.ema.store()
-    #         self.ema.copy_to()
-    #
-    #     if self.normalizers is not None and "target" in self.normalizers:
-    #         self.normalizers["target"].to(self.device)
-    #     predictions = {"id": [], "energy": []}
-    #
-    #     for _, batch in tqdm(
-    #         enumerate(loader),
-    #         total=len(loader),
-    #         position=rank,
-    #         desc="device {}".format(rank),
-    #         disable=disable_tqdm,
-    #     ):
-    #         with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-    #             out = self._forward(batch)
-    #
-    #         if self.normalizers is not None and "target" in self.normalizers:
-    #             out["energy"] = self.normalizers["target"].denorm(
-    #                 out["energy"]
-    #             )
-    #
-    #         if per_image:
-    #             predictions["id"].extend(
-    #                 [str(i) for i in batch[0].sid.tolist()]
-    #             )
-    #             predictions["energy"].extend(
-    #                 out["energy"].cpu().detach().numpy()
-    #             )
-    #         else:
-    #             predictions["energy"] = out["energy"].detach()
-    #             return predictions
-    #
-    #     self.save_results(predictions, results_file, keys=["energy"])
-    #
-    #     if self.ema:
-    #         self.ema.restore()
-    #
-    #     return predictions
-
-    #改
     def predict(
-            self,
-            loader,
-            per_image: bool = True,
-            results_file=None,
-            disable_tqdm: bool = False,
+        self,
+        loader,
+        per_image: bool = True,
+        results_file=None,
+        disable_tqdm: bool = False,
     ):
         ensure_fitted(self._unwrapped_model)
 
@@ -199,14 +133,14 @@ class EnergyTrainer(BaseTrainer):
 
         if self.normalizers is not None and "target" in self.normalizers:
             self.normalizers["target"].to(self.device)
-        predictions = {"ids1": [],"ids2": [], "energy": []}
+        predictions = {"id": [], "energy": []}
 
         for _, batch in tqdm(
-                enumerate(loader),
-                total=len(loader),
-                position=rank,
-                desc="device {}".format(rank),
-                disable=disable_tqdm,
+            enumerate(loader),
+            total=len(loader),
+            position=rank,
+            desc="device {}".format(rank),
+            disable=disable_tqdm,
         ):
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 out = self._forward(batch)
@@ -217,12 +151,9 @@ class EnergyTrainer(BaseTrainer):
                 )
 
             if per_image:
-                predictions["ids1"].extend(
+                predictions["id"].extend(
                     [str(i) for i in batch[0].sid.tolist()]
                 )
-                # predictions["ids2"].extend(
-                #     [str(i) for i in batch[0].fid.tolist()]
-                # )
                 predictions["energy"].extend(
                     out["energy"].cpu().detach().numpy()
                 )
@@ -236,6 +167,75 @@ class EnergyTrainer(BaseTrainer):
             self.ema.restore()
 
         return predictions
+
+    # #改
+    # def predict(
+    #         self,
+    #         loader,
+    #         per_image: bool = True,
+    #         results_file=None,
+    #         disable_tqdm: bool = False,
+    # ):
+    #     ensure_fitted(self._unwrapped_model)
+    #
+    #     if distutils.is_master() and not disable_tqdm:
+    #         logging.info("Predicting on test.")
+    #     assert isinstance(
+    #         loader,
+    #         (
+    #             torch.utils.data.dataloader.DataLoader,
+    #             torch_geometric.data.Batch,
+    #         ),
+    #     )
+    #     rank = distutils.get_rank()
+    #
+    #     if isinstance(loader, torch_geometric.data.Batch):
+    #         loader = [[loader]]
+    #
+    #     self.model.eval()
+    #     if self.ema:
+    #         self.ema.store()
+    #         self.ema.copy_to()
+    #
+    #     if self.normalizers is not None and "target" in self.normalizers:
+    #         self.normalizers["target"].to(self.device)
+    #     predictions = {"ids1": [],"ids2": [], "energy": []}
+    #
+    #     for _, batch in tqdm(
+    #             enumerate(loader),
+    #             total=len(loader),
+    #             position=rank,
+    #             desc="device {}".format(rank),
+    #             disable=disable_tqdm,
+    #     ):
+    #         with torch.cuda.amp.autocast(enabled=self.scaler is not None):
+    #             out = self._forward(batch)
+    #
+    #         if self.normalizers is not None and "target" in self.normalizers:
+    #             out["energy"] = self.normalizers["target"].denorm(
+    #                 out["energy"]
+    #             )
+    #
+    #         if per_image:
+    #             predictions["ids1"].extend(
+    #                 [str(i) for i in batch[0].sid.tolist()]
+    #             )
+    #             # predictions["ids2"].extend(
+    #             #     [str(i) for i in batch[0].fid.tolist()]
+    #             # )
+    #             predictions["energy"].extend(
+    #                 out["energy"].cpu().detach().numpy()
+    #             )
+    #         else:
+    #             predictions["energy"] = out["energy"].detach()
+    #             return predictions
+    #
+    #     self.save_results(predictions, results_file, keys=["energy"])
+    #
+    #     if self.ema:
+    #         self.ema.restore()
+    #
+    #     return predictions
 
     def train(self, disable_eval_tqdm: bool = False) -> None:
         ensure_fitted(self._unwrapped_model, warn=True)

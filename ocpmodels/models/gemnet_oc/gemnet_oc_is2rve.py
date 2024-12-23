@@ -51,72 +51,7 @@ from .utils import (
 )
 
 
-class AdsorbateCatalystInteraction(nn.Module):
-    def __init__(self, emb_size_atom, emb_size_adsorbate, conv_out_channels, final_emb_size):
-        super(AdsorbateCatalystInteraction, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(2, 1), padding=(0, 0))
-        # self.conv2 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(2, 1), padding=(0, 0))
-        # self.conv3 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(3, 1), padding=(1, 0))
-        self.activation = nn.ReLU()
-        # self.global_avg_pool = nn.AdaptiveAvgPool2d((1, final_emb_size))
-        self.emb_size_atom = emb_size_atom
-        self.emb_size_adsorbate = emb_size_adsorbate
-        self.ads_feature_transform = nn.Linear(emb_size_adsorbate, emb_size_atom)
-
-    def forward(self, x_E, ads_features, batch):
-        final_x_E_list = []
-
-        for i in torch.unique(batch):
-            mask = batch == i
-            x_E_sample = x_E[mask].unsqueeze(0).unsqueeze(0)  # 调整 x_E 维度 [1, 1, n, 256]
-            # print(x_E_sample.shape)
-            ads_features_transformed_sample = self.ads_feature_transform(ads_features[i].unsqueeze(0)).unsqueeze(0).unsqueeze(2)  # [1, 1, 1, 256]
-            # print(ads_features_transformed_sample.shape)
-            x_E_with_ads = torch.cat([x_E_sample, ads_features_transformed_sample], dim=2)  # [1, 1, n+1, 256]
-            x = self.conv1(x_E_with_ads)
-            x = self.activation(x)
-            # x = self.conv2(x)
-            # x = self.activation(x)
-            # x = self.conv3(x)
-            # x = self.activation(x)
-            # x = self.global_avg_pool(x)
-            x = x.squeeze(0).squeeze(0)  # [n+1, 256]
-
-            # final_x_E_list.append(x[:-1])  # 删除最后一行吸附剂特征向量
-            final_x_E_list.append(x)
-        final_x_E_combined = torch.cat(final_x_E_list, dim=0)
-        return final_x_E_combined
-
-
-# class AdsorbateCatalystInteraction(nn.Module):
-#     def __init__(self, emb_size_atom, emb_size_adsorbate, num_heads, num_layers, final_emb_size):
-#         super(AdsorbateCatalystInteraction, self).__init__()
-#         self.emb_size_atom = emb_size_atom
-#         self.emb_size_adsorbate = emb_size_adsorbate
-#
-#         self.ads_feature_transform = nn.Linear(emb_size_adsorbate, emb_size_atom)
-#         encoder_layer = nn.TransformerEncoderLayer(d_model=emb_size_atom, nhead=num_heads, batch_first=True)
-#         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-#         self.final_layer = nn.Linear(emb_size_atom, final_emb_size)
-#
-#     def forward(self, x_E, ads_features, batch):
-#         final_x_E_list = []
-#
-#         for i in torch.unique(batch):
-#             mask = batch == i
-#             x_E_sample = x_E[mask].unsqueeze(0)  # 调整 x_E 维度 [1, n, 256]
-#             ads_features_transformed = self.ads_feature_transform(ads_features[i].unsqueeze(0)).unsqueeze(
-#                 1)  # [1, 1, 256]
-#             x_E_with_ads = torch.cat([x_E_sample, ads_features_transformed], dim=1)  # [1, n+1, 256]
-#             transformer_out = self.transformer_encoder(x_E_with_ads)
-#             final_x_E = self.final_layer(transformer_out).squeeze(0)  # [n+1, 256]
-#             final_x_E_list.append(final_x_E[:-1])  # 删除最后一行吸附剂特征向量
-#
-#         final_x_E_combined = torch.cat(final_x_E_list, dim=0)
-#         return final_x_E_combined
-
-
-@registry.register_model("gemnet_oc_ac")
+@registry.register_model("gemnet_is2rve0")
 class GemNetOC(BaseModel):
     """
     Arguments
@@ -418,7 +353,7 @@ class GemNetOC(BaseModel):
         self.int_blocks = torch.nn.ModuleList(int_blocks)
 
         out_blocks = []
-        for _ in range(num_blocks + 1):
+        for _ in range(num_blocks + 2):
             out_blocks.append(
                 OutputBlock(
                     emb_size_atom=emb_size_atom,
@@ -435,7 +370,8 @@ class GemNetOC(BaseModel):
 
         out_mlp_E = [
                         Dense(
-                            emb_size_atom * (num_blocks + 1),
+                            # emb_size_atom * (num_blocks + 1),
+                            emb_size_atom * (3 + 1), # 暂时先固定层数
                             emb_size_atom,
                             activation=activation,
                         )
@@ -471,7 +407,8 @@ class GemNetOC(BaseModel):
         if self.update_pos:
             out_mlp_P = [
                             Dense(
-                                emb_size_edge * (num_blocks + 1),
+                                # emb_size_edge * (num_blocks + 1),
+                                emb_size_edge * (2 + 1), # 暂时先固定层数
                                 emb_size_edge,
                                 activation=activation,
                             )
@@ -494,21 +431,7 @@ class GemNetOC(BaseModel):
             self.out_pos.reset_parameters(out_initializer)
 
         load_scales_compat(self, scale_file)
-        # 卷积
-        self.ads_cat_interaction = AdsorbateCatalystInteraction(
-            emb_size_atom=256,
-            emb_size_adsorbate=emb_size_adsorbate,
-            conv_out_channels=256,
-            final_emb_size=256
-        )
-        # transformer
-        # self.ads_cat_interaction = AdsorbateCatalystInteraction(
-        #     emb_size_atom=256,
-        #     emb_size_adsorbate=emb_size_adsorbate,
-        #     num_heads=num_heads,
-        #     num_layers=num_layers,
-        #     final_emb_size=final_emb_size
-        # )
+
 
     def set_cutoffs(self, cutoff, cutoff_qint, cutoff_aeaint, cutoff_aint):
         self.cutoff = cutoff
@@ -1343,6 +1266,157 @@ class GemNetOC(BaseModel):
             #     self.cutoff_aint,
             #     self.max_neighbors_aint,
             # )
+
+            a2ee2a_graph = self.subselect_graph(
+                data,
+                a2a_graph,
+                self.cutoff_aeaint,
+                self.max_neighbors_aeaint,
+                self.cutoff_aint,
+                self.max_neighbors_aint,
+            )
+        else:
+            main_graph = self.generate_graph_dict(
+                data, self.cutoff, self.max_neighbors
+            )
+            a2a_graph = {}
+            a2ee2a_graph = {}
+        if self.quad_interaction:
+            if (
+                    self.atom_edge_interaction
+                    or self.edge_atom_interaction
+                    or self.atom_interaction
+            ):
+                qint_graph = self.subselect_graph_cat(
+                    data,
+                    a2a_graph,
+                    self.cutoff_qint,
+                    self.max_neighbors_qint,
+                    self.cutoff_aint,
+                    self.max_neighbors_aint,
+                )
+            else:
+                assert self.cutoff_qint <= self.cutoff
+                assert self.max_neighbors_qint <= self.max_neighbors
+                qint_graph = self.subselect_graph_cat(
+                    data,
+                    main_graph,
+                    self.cutoff_qint,
+                    self.max_neighbors_qint,
+                    self.cutoff,
+                    self.max_neighbors,
+                )
+
+
+            # Only use quadruplets for certain tags
+            self.qint_tags = self.qint_tags.to(qint_graph["edge_index"].device)
+            tags_s = data.tags[qint_graph["edge_index"][0]]
+            tags_t = data.tags[qint_graph["edge_index"][1]]
+            qint_tag_mask_s = (tags_s[..., None] == self.qint_tags).any(dim=-1)
+            qint_tag_mask_t = (tags_t[..., None] == self.qint_tags).any(dim=-1)
+            qint_tag_mask = qint_tag_mask_s | qint_tag_mask_t
+            qint_graph["edge_index"] = qint_graph["edge_index"][
+                                       :, qint_tag_mask
+                                       ]
+            qint_graph["cell_offset"] = qint_graph["cell_offset"][
+                                        qint_tag_mask, :
+                                        ]
+            qint_graph["distance"] = qint_graph["distance"][qint_tag_mask]
+            qint_graph["vector"] = qint_graph["vector"][qint_tag_mask, :]
+            del qint_graph["num_neighbors"]
+        else:
+            qint_graph = {}
+
+        # Symmetrize edges for swapping in symmetric message passing
+        # main_graph, id_swap = self.symmetrize_edges(main_graph, data.batch)
+        trip_idx_e2e = get_triplets(main_graph, num_atoms=num_atoms)
+
+        # Additional indices for quadruplets
+        if self.quad_interaction:
+            quad_idx = get_quadruplets(
+                main_graph,
+                qint_graph,
+                num_atoms,
+            )
+        else:
+            quad_idx = {}
+
+        if self.atom_edge_interaction:
+            trip_idx_a2e = get_mixed_triplets(
+                a2ee2a_graph,
+                main_graph,
+                num_atoms=num_atoms,
+                return_agg_idx=True,
+            )
+        else:
+            trip_idx_a2e = {}
+        if self.edge_atom_interaction:
+            trip_idx_e2a = get_mixed_triplets(
+                main_graph,
+                a2ee2a_graph,
+                num_atoms=num_atoms,
+                return_agg_idx=True,
+            )
+            # a2ee2a_graph['edge_index'][1] has to be sorted for this
+            a2ee2a_graph["target_neighbor_idx"] = get_inner_idx(
+                a2ee2a_graph["edge_index"][1], dim_size=num_atoms
+            )
+        else:
+            trip_idx_e2a = {}
+        if self.atom_interaction:
+            # a2a_graph['edge_index'][1] has to be sorted for this
+            a2a_graph["target_neighbor_idx"] = get_inner_idx(
+                a2a_graph["edge_index"][1], dim_size=num_atoms
+            )
+
+        return (
+            main_graph,
+            a2a_graph,
+            a2ee2a_graph,
+            qint_graph,
+            id_swap,
+            trip_idx_e2e,
+            trip_idx_a2e,
+            trip_idx_e2a,
+            quad_idx,
+        )
+
+    def get_graphs_and_indices_from_main_graph(self, data, graph):
+        # main_graph使用lmdb中定义的图结构
+        """ "Generate embedding and interaction graphs and indices."""
+        num_atoms = data.atomic_numbers.size(0)
+
+        # Atom interaction graph is always the largest
+
+        distance_vec = torch.norm(graph['vector'], dim=0)
+
+        (
+            edge_index,
+            edge_dist,
+            distance_vec,
+            cell_offsets,
+            _,  # cell offset distances
+            num_neighbors,
+        ) = self.generate_graph(data, otf_graph=False)
+        edge_vector = -distance_vec / edge_dist[:, None]
+        cell_offsets = -cell_offsets  # a - c + offset
+        main_graph = {
+            "edge_index": edge_index,
+            "distance": edge_dist,
+            "vector": edge_vector,
+            "cell_offset": cell_offsets,
+            "num_neighbors": num_neighbors,
+        }
+        id_swap = data.id_swap
+
+        if (
+                self.atom_edge_interaction
+                or self.edge_atom_interaction
+                or self.atom_interaction
+        ):
+            a2a_graph = self.generate_graph_dict(
+                data, self.cutoff_aint, self.max_neighbors_aint
+            )
 
             a2ee2a_graph = self.subselect_graph(
                 data,
@@ -2541,18 +2615,13 @@ class GemNetOC(BaseModel):
 
     @conditional_grad(torch.enable_grad())
     def forward(self, data):
-
-        # --------------------输出修改为pos更新量----------------------------------
-        pos = data.pos
+        # --------------------energy使用更新后的V_t来预测----------------------------------
         batch = data.batch
         tags = data.tags
-        # tags1 = data.tags1
         atomic_numbers = data.atomic_numbers.long()
         num_atoms = atomic_numbers.shape[0]
 
-        if self.regress_forces and not self.direct_forces:
-            pos.requires_grad_(True)
-
+        # ----------------- 更新Vetor -------------------------
         (
             main_graph,
             a2a_graph,
@@ -2603,9 +2672,9 @@ class GemNetOC(BaseModel):
         x_E, x_F, x_P = self.out_blocks[0](h, m, basis_output, idx_t, mask=mask)
         # (nEdges, emb_size_edge)
         xs_P = [x_P]
-        xs_E = [x_E]
 
-        for i in range(self.num_blocks):
+        # for i in range(self.num_blocks):
+        for i in range(2): # 先固定层数
             # Interaction block
             h, m = self.int_blocks[i](
                 h=h,
@@ -2629,22 +2698,7 @@ class GemNetOC(BaseModel):
             x_E, x_F, x_P = self.out_blocks[i + 1](h, m, basis_output, idx_t, mask=mask)
             # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
             xs_P.append(x_P)
-            xs_E.append(x_E)
 
-        # 能量预测部分
-        x_E = self.out_mlp_E(torch.cat(xs_E, dim=-1))
-        with torch.cuda.amp.autocast(False):
-            E_t = self.out_energy(x_E.float())
-        nMolecules = torch.max(batch) + 1
-        if self.extensive:
-            E_t = scatter_det(
-                E_t, batch, dim=0, dim_size=nMolecules, reduce="add"
-            )  # (nMolecules, num_targets)
-        else:
-            E_t = scatter_det(
-                E_t, batch, dim=0, dim_size=nMolecules, reduce="mean"
-            )  # (nMolecules, num_targets)
-        E_t = E_t.squeeze(1)  # (num_molecules)
         # Global output block for final predictions
         if self.update_pos:
             x_P = self.out_mlp_P(torch.cat(xs_P, dim=-1))
@@ -2653,147 +2707,24 @@ class GemNetOC(BaseModel):
             V_t = P_t.squeeze(1) # batch 3
             # vector = main_graph['vector'][mask]
             # V_t = vector + P_t
-            return V_t, mask, E_t
             # return V_t, mask
         else:
-            return 0
+            V_t = 0
 
-    # @conditional_grad(torch.enable_grad())
-    # def forward(self, data):
-    #     # --------------------原始代码----------------------------------
-    #     pos = data.pos
-    #     batch = data.batch
-    #     atomic_numbers = data.atomic_numbers.long()
-    #     num_atoms = atomic_numbers.shape[0]
-    #
-    #     if self.regress_forces and not self.direct_forces:
-    #         pos.requires_grad_(True)
-    #
-    #     (
-    #         main_graph,
-    #         a2a_graph,
-    #         a2ee2a_graph,
-    #         qint_graph,
-    #         id_swap,
-    #         trip_idx_e2e,
-    #         trip_idx_a2e,
-    #         trip_idx_e2a,
-    #         quad_idx,
-    #     ) = self.get_graphs_and_indices(data)
-    #     _, idx_t = main_graph["edge_index"]
-    #
-    #     (
-    #         basis_rad_raw,
-    #         basis_atom_update,
-    #         basis_output,
-    #         bases_qint,
-    #         bases_e2e,
-    #         bases_a2e,
-    #         bases_e2a,
-    #         basis_a2a_rad,
-    #     ) = self.get_bases(
-    #         main_graph=main_graph,
-    #         a2a_graph=a2a_graph,
-    #         a2ee2a_graph=a2ee2a_graph,
-    #         qint_graph=qint_graph,
-    #         trip_idx_e2e=trip_idx_e2e,
-    #         trip_idx_a2e=trip_idx_a2e,
-    #         trip_idx_e2a=trip_idx_e2a,
-    #         quad_idx=quad_idx,
-    #         num_atoms=num_atoms,
-    #     )
-    #
-    #     # Embedding block
-    #     h = self.atom_emb(atomic_numbers)
-    #     # (nAtoms, emb_size_atom)
-    #     m = self.edge_emb(h, basis_rad_raw, main_graph["edge_index"])
-    #     # (nEdges, emb_size_edge)
-    #
-    #     x_E, x_F, x_P = self.out_blocks[0](h, m, basis_output, idx_t) # 适应out_blocks的变化，实际无影响
-    #     # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-    #     xs_E, xs_F = [x_E], [x_F]
-    #
-    #     for i in range(self.num_blocks):
-    #         # Interaction block
-    #         h, m = self.int_blocks[i](
-    #             h=h,
-    #             m=m,
-    #             bases_qint=bases_qint,
-    #             bases_e2e=bases_e2e,
-    #             bases_a2e=bases_a2e,
-    #             bases_e2a=bases_e2a,
-    #             basis_a2a_rad=basis_a2a_rad,
-    #             basis_atom_update=basis_atom_update,
-    #             edge_index_main=main_graph["edge_index"],
-    #             a2ee2a_graph=a2ee2a_graph,
-    #             a2a_graph=a2a_graph,
-    #             id_swap=id_swap,
-    #             trip_idx_e2e=trip_idx_e2e,
-    #             trip_idx_a2e=trip_idx_a2e,
-    #             trip_idx_e2a=trip_idx_e2a,
-    #             quad_idx=quad_idx,
-    #         )  # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-    #
-    #         x_E, x_F, x_P = self.out_blocks[i + 1](h, m, basis_output, idx_t)  # 适应out_blocks的变化，实际无影响
-    #         # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-    #         xs_E.append(x_E)
-    #         xs_F.append(x_F)
-    #     # Global output block for final predictions
-    #     x_E = self.out_mlp_E(torch.cat(xs_E, dim=-1))
-    #     if self.direct_forces:
-    #         x_F = self.out_mlp_F(torch.cat(xs_F, dim=-1))
-    #     with torch.cuda.amp.autocast(False):
-    #         E_t = self.out_energy(x_E.float())
-    #         if self.direct_forces:
-    #             F_st = self.out_forces(x_F.float())
-    #
-    #     nMolecules = torch.max(batch) + 1
-    #     if self.extensive:
-    #         E_t = scatter_det(
-    #             E_t, batch, dim=0, dim_size=nMolecules, reduce="add"
-    #         )  # (nMolecules, num_targets)
-    #     else:
-    #         E_t = scatter_det(
-    #             E_t, batch, dim=0, dim_size=nMolecules, reduce="mean"
-    #         )  # (nMolecules, num_targets)
-    #
-    #     if self.regress_forces:
-    #         if self.direct_forces:
-    #             if self.forces_coupled:  # enforce F_st = F_ts
-    #                 nEdges = idx_t.shape[0]
-    #                 id_undir = repeat_blocks(
-    #                     main_graph["num_neighbors"] // 2,
-    #                     repeats=2,
-    #                     continuous_indexing=True,
-    #                 )
-    #                 F_st = scatter_det(
-    #                     F_st,
-    #                     id_undir,
-    #                     dim=0,
-    #                     dim_size=int(nEdges / 2),
-    #                     reduce="mean",
-    #                 )  # (nEdges/2, num_targets)
-    #                 F_st = F_st[id_undir]  # (nEdges, num_targets)
-    #
-    #             # map forces in edge directions
-    #             F_st_vec = F_st[:, :, None] * main_graph["vector"][:, None, :]
-    #             # (nEdges, num_targets, 3)
-    #             F_t = scatter_det(
-    #                 F_st_vec,
-    #                 idx_t,
-    #                 dim=0,
-    #                 dim_size=num_atoms,
-    #                 reduce="add",
-    #             )  # (nAtoms, num_targets, 3)
-    #         else:
-    #             F_t = self.force_scaler.calc_forces_and_update(E_t, pos)
-    #         E_t = E_t.squeeze(1)  # (num_molecules)
-    #         F_t = F_t.squeeze(1)  # (num_atoms, 3)
-    #         return E_t, F_t
-    #     else:
-    #         E_t = E_t.squeeze(1)  # (num_molecules)
-    #         return E_t
-#     #
-    # @property
-    # def num_params(self) -> int:
-    #     return sum(p.numel() for p in self.parameters())
+        # ----------------- 能量预测部分 -----------------------------
+        # 使用更新的V_t作为新的边Vetor， 这里默认了self.update_pos为true，如果之后需要整合，这里需做判断处理
+        main_graph['vector'] = V_t
+
+        # x_E = self.out_mlp_E(torch.cat(xs_E, dim=-1))
+        # with torch.cuda.amp.autocast(False):
+        #     E_t = self.out_energy(x_E.float())
+        # nMolecules = torch.max(batch) + 1
+        # if self.extensive:
+        #     E_t = scatter_det(
+        #         E_t, batch, dim=0, dim_size=nMolecules, reduce="add"
+        #     )  # (nMolecules, num_targets)
+        # else:
+        #     E_t = scatter_det(
+        #         E_t, batch, dim=0, dim_size=nMolecules, reduce="mean"
+        #     )  # (nMolecules, num_targets)
+        # E_t = E_t.squeeze(1)  # (num_molecules)

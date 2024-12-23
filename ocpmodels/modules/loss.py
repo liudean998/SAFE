@@ -28,10 +28,11 @@ class MaeV(nn.Module):
 
     def forward(self, input: torch.Tensor, target: torch.Tensor):
         diff = torch.abs(input-target)
-        if self.reduction == "mean":
-            return torch.mean(diff)
-        elif self.reduction == "sum":
-            return torch.sum(diff)
+        return torch.mean(diff)
+        # if self.reduction == "mean":
+        #     return torch.mean(diff)
+        # elif self.reduction == "sum":
+        #     return torch.sum(diff)
 
 class MseV(nn.Module):
     def __init__(self, reduction: str = "mean") -> None:
@@ -41,10 +42,11 @@ class MseV(nn.Module):
 
     def forward(self, input: torch.Tensor, target: torch.Tensor):
         diff = (input-target)**2
-        if self.reduction == "mean":
-            return torch.mean(diff)
-        elif self.reduction == "sum":
-            return torch.sum(diff)
+        return torch.mean(diff)
+        # if self.reduction == "mean":
+        #     return torch.mean(diff)
+        # elif self.reduction == "sum":
+        #     return torch.sum(diff)
 
 class AtomwiseL2Loss(nn.Module):
     def __init__(self, reduction: str = "mean") -> None:
@@ -71,11 +73,12 @@ class AtomwiseL2Loss(nn.Module):
 
 
 class DDPLoss(nn.Module):
-    def __init__(self, loss_fn, reduction: str = "mean") -> None:
+    def __init__(self, loss_fn, reduction: str = "mean", loss_name: str = '') -> None:
         super().__init__()
         self.loss_fn = loss_fn
         self.loss_fn.reduction = "sum"
         self.reduction = reduction
+        self.loss_name = loss_name # 修改-增加 对原结构无影响
         assert reduction in ["mean", "sum"]
 
     def forward(
@@ -95,6 +98,8 @@ class DDPLoss(nn.Module):
             loss = self.loss_fn(input, target)
         else:  # atom-wise loss
             loss = self.loss_fn(input, target, natoms)
+        if self.loss_name in ['mse_v', 'mae_v']:
+            return loss
         if self.reduction == "mean":
             num_samples = (
                 batch_size if batch_size is not None else input.shape[0]
