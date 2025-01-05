@@ -1,12 +1,12 @@
 trainer: is2rv # trainer名字
 
 dataset:
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/all_edge/train
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/vector/all_edge/train
     normalize_labels: False # 标准化开关
 #    v_mean: [0, 0, 0]
 #    v_std: [2.7150, 2.7152, 2.8704]
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/all_edge/test
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/all_edge/test
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/vector/all_edge/test
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/all_stru/vector/all_edge/test
 
 
 logger: tensorboard

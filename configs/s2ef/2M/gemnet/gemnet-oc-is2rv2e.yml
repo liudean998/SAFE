@@ -1,5 +1,5 @@
 includes:
-  - configs/s2ef/2M/base-is2rve.yml
+  - configs/s2ef/2M/base-is2rv2e.yml
 
 model:
   name: gemnet_is2rv2e
@@ -44,7 +44,7 @@ model:
   extensive: True
   output_init: HeOrthogonal
   activation: silu
-  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
+  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc-is2rv2e.pt
 
 #  regress_forces: True
   regress_forces: False

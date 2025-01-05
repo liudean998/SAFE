@@ -312,10 +312,9 @@ class Is2RvTrainer(BaseTrainer):
                 # Get a batch.
                 batch = next(train_loader_iter)
 
-                is_back = True
                 # Forward, loss, backward.
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                    out = self._forward(batch)
+                    out = self._forward(batch, self.step)
                     loss = self._compute_loss(out, batch)
 
                 loss = self.scaler.scale(loss) if self.scaler else loss
@@ -419,14 +418,11 @@ class Is2RvTrainer(BaseTrainer):
         if self.config.get("test_dataset", False):
             self.test_dataset.close_db()
 
-    def _forward(self, batch_list):
+    def _forward(self, batch_list, step=None):
         # forward pass.
         # out_pos, out_mask, out_e = self.model(batch_list)
-        out_vector, out_mask = self.model(batch_list)
-        print(out_vector.shape, 'oooooo')
-        import time
-        time.sleep(10000)
-
+        # print(self.model)
+        out_vector, out_mask = self.model(batch_list, step=step)
         out = {
             "vector": out_vector,
             "mask": out_mask,
@@ -437,22 +433,13 @@ class Is2RvTrainer(BaseTrainer):
 
     def _compute_loss(self, out, batch_list) -> int:
         loss = []
-        # 能量损失
-        # energy_target = torch.cat(
-        #     [batch.y.to(self.device) for batch in batch_list], dim=0
-        # )
-        # if self.normalizer.get("normalize_labels", False):
-        #     target_normed = self.normalizers["target"].norm(energy_target)
-        # else:
-        #     target_normed = energy_target
-        # energy_loss = self.loss_fn["energy"](out["energy"], target_normed)
         # 结构损失
         if self.config["model_attributes"].get("update_v", True):
             v_target = torch.cat(
                 [batch.v1.to(self.device) for batch in batch_list]
             )  # 更新vector版本
-
-            v_target = v_target[out['mask']]
+            if out['mask'] is not None:
+                v_target = v_target[out['mask']]
 
             if self.normalizer.get("normalize_labels", False):
                 if "v_mean" in self.normalizer:
@@ -514,7 +501,7 @@ class Is2RvTrainer(BaseTrainer):
                     raise NotImplementedError
             else:
                 # Force coefficient = 30 has been working well for us.
-                pos_mult = self.config["optim"].get("pos_coefficient", 30)
+                pos_mult = self.config["optim"].get("v_coefficient", 30)
                 if self.config["task"].get("train_on_free_atoms", False):
                     fixed = torch.cat(
                         [batch.fixed.to(self.device) for batch in batch_list]
@@ -555,10 +542,10 @@ class Is2RvTrainer(BaseTrainer):
                 else:
                     # 目前使用
                     loss.append(
-                        pos_mult
-                        * self.loss_fn["vector"](out["vector"],
-                                                v_target)
-                    )
+                            pos_mult
+                            * self.loss_fn["vector"](out['vector'],
+                                                    v_target)
+                        )
         # Sanity check to make sure the compute graph is correct.
         for lc in loss:
             assert hasattr(lc, "grad_fn")
@@ -574,11 +561,11 @@ class Is2RvTrainer(BaseTrainer):
         vector_target = torch.cat(
             [batch.v1.to(self.device) for batch in batch_list]
         )  # 更新vector版本
-        # energy_target = torch.cat(
-        #     [batch.y.to(self.device) for batch in batch_list], dim=0
-        # )
 
-        v_target = vector_target[out['mask']]
+        if out['mask'] is not None:
+            v_target = vector_target[out['mask']]
+        else:
+            v_target = vector_target
 
         target = {
             "natoms": natoms,
@@ -609,7 +596,6 @@ class Is2RvTrainer(BaseTrainer):
 
         if self.normalizer.get("normalize_labels", False):
             if "v_target" in self.normalizers:
-            # out["energy"] = self.normalizers["target"].denorm(out["energy"])
                 out["vector"] = self.normalizers["v_target"].denorm(
                     out["vector"]
                 )

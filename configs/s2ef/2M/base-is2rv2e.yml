@@ -1,12 +1,12 @@
 trainer: is2rve # trainer名字
 
 dataset:
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/50k/vector/train
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/tags/vector/train
     normalize_labels: True # 标准化开关
-    target_mean: -1.3761
-    target_std: 2.0340
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/50k/vector/val
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/50k/vector/test
+    target_mean: -1.4191
+    target_std: 2.0206
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/tags/vector/test
+  - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/tags/vector/test
 
 
 logger: tensorboard

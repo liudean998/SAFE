@@ -938,12 +938,12 @@ def get_max_neighbors_mask(
 
     device = natoms.device
     num_atoms = natoms.sum()
-
     # Get number of neighbors
     # segment_coo assumes sorted index
     ones = index.new_ones(1).expand_as(index)
     num_neighbors = segment_coo(ones, index, dim_size=num_atoms)
     max_num_neighbors = num_neighbors.max()
+    # print(max_num_neighbors, ',,,,,')
     num_neighbors_thresholded = num_neighbors.clamp(
         max=max_num_neighbors_threshold
     )

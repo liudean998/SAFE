@@ -9,6 +9,7 @@
  'int_blocks.0.edge_atom_interaction.scale_cbf_sum': Parameter containing: tensor(0.5292),
  'int_blocks.0.atom_interaction.scale_rbf_sum': Parameter containing: tensor(0.5019),
  'int_blocks.0.atom_update.scale_sum': Parameter containing: tensor(0.7639),
+
  'int_blocks.1.trip_interaction.scale_rbf': Parameter containing: tensor(8.6022),
  'int_blocks.1.trip_interaction.scale_cbf_sum': Parameter containing: tensor(4.7884),
  'int_blocks.1.quad_interaction.scale_rbf': Parameter containing: tensor(9.0025),
@@ -20,6 +21,7 @@
  'int_blocks.1.edge_atom_interaction.scale_cbf_sum': Parameter containing: tensor(0.5163),
  'int_blocks.1.atom_interaction.scale_rbf_sum': Parameter containing: tensor(0.4642),
  'int_blocks.1.atom_update.scale_sum': Parameter containing: tensor(0.6910),
+
  'int_blocks.2.trip_interaction.scale_rbf': Parameter containing: tensor(8.4562),
  'int_blocks.2.trip_interaction.scale_cbf_sum': Parameter containing: tensor(4.5697),
  'int_blocks.2.quad_interaction.scale_rbf': Parameter containing: tensor(9.2125),
@@ -31,6 +33,7 @@
  'int_blocks.2.edge_atom_interaction.scale_cbf_sum': Parameter containing: tensor(0.4903),
  'int_blocks.2.atom_interaction.scale_rbf_sum': Parameter containing: tensor(0.4351),
  'int_blocks.2.atom_update.scale_sum': Parameter containing: tensor(0.6962),
+
  'int_blocks.3.trip_interaction.scale_rbf': Parameter containing: tensor(8.5656),
  'int_blocks.3.trip_interaction.scale_cbf_sum': Parameter containing: tensor(4.6556),
  'int_blocks.3.quad_interaction.scale_rbf': Parameter containing: tensor(9.2905),

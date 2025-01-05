@@ -1174,7 +1174,6 @@ class GemNetOC(BaseModel):
     ):
         """Calculate and transform basis functions."""
         basis_rad_main_raw = self.radial_basis(main_graph["distance"])
-
         # Calculate triplet angles
         cosφ_cab = inner_product_clamped(
             main_graph["vector"][trip_idx_e2e["out"]],
