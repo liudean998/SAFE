@@ -7,7 +7,7 @@ model:
 #  num_radial: 255 # 为了适应vector边的嵌入维度
   num_radial: 256
   num_blocks: 3
-  emb_size_atom: 168 # 256+128其中128为原子标签信息
+  emb_size_atom: 128 # 256+128其中128为原子标签信息
   emb_size_edge: 512
 #  emb_size_edge: 768 # 为了适应vector边的嵌入维度
   emb_size_trip_in: 64
@@ -44,7 +44,7 @@ model:
   extensive: True
   output_init: HeOrthogonal
   activation: silu
-  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc-is2rv2.pt
+  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
 #  regress_forces: True
   regress_forces: False
@@ -86,6 +86,7 @@ optim:
   max_epochs: 200
   force_coefficient: 100
   v_coefficient: 1
+  d_coefficient: 10
   energy_coefficient: 1
   ema_decay: 0.999
   clip_grad_norm: 10

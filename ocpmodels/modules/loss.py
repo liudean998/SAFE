@@ -26,8 +26,10 @@ class MaeV(nn.Module):
         self.reduction = reduction
         assert reduction in ["mean", "sum"]
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor):
+    def forward(self, input: torch.Tensor, target: torch.Tensor, weight: Optional[torch.Tensor] = None) -> torch.Tensor:
         diff = torch.abs(input-target)
+        if weight is not None:
+            diff = diff * weight.view(-1, 1)
         return torch.mean(diff)
         # if self.reduction == "mean":
         #     return torch.mean(diff)
@@ -87,6 +89,7 @@ class DDPLoss(nn.Module):
         target: torch.Tensor,
         natoms: Optional[torch.Tensor] = None,
         batch_size: Optional[int] = None,
+        weight: Optional[torch.Tensor] = None
     ):
         # zero out nans, if any
         found_nans_or_infs = not torch.all(input.isfinite())
@@ -95,7 +98,10 @@ class DDPLoss(nn.Module):
             input = torch.nan_to_num(input, nan=0.0)
 
         if natoms is None:
-            loss = self.loss_fn(input, target)
+            if weight is not None:
+                loss = self.loss_fn(input, target, weight=weight)
+            else:
+                loss = self.loss_fn(input, target)
         else:  # atom-wise loss
             loss = self.loss_fn(input, target, natoms)
         if self.loss_name in ['mse_v', 'mae_v']:

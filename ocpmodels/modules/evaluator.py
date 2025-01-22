@@ -57,6 +57,12 @@ class Evaluator:
             "v_mae",
             "v_mse",
         ], # 增加
+        "is2rvd":[
+            "v_mae",
+            "v_mse",
+            "d_mae",
+            "d_mse"
+        ],
         "is2re": ["energy_mae", "energy_mse", "energy_within_threshold"],
     }
 
@@ -64,6 +70,7 @@ class Evaluator:
         "s2ef": ["energy", "forces", "natoms"],
         "is2rs": ["positions", "cell", "pbc", "natoms"],
         "is2rv": ["vector"], # 增加
+        "is2rvd": ["vector","distance"], # 增加
         "is2rve": ["vector", "energy"], # 增加
         "is2re": ["energy"],
     }
@@ -72,12 +79,13 @@ class Evaluator:
         "s2ef": "energy_force_within_threshold",
         # "is2rs": "average_distance_within_threshold",
         "is2rv": "v_mae", # 修改
+        "is2rvd": "loss", # 修改
         "is2rve": "energy_mae", # 修改
         "is2re": "energy_mae",
     }
 
     def __init__(self, task: str) -> None:
-        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rve'] # 增加
+        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rvd', 'is2rve'] # 增加
         self.task = task
         self.metric_fn = self.task_metrics[task]
 
@@ -184,6 +192,13 @@ def v_mae(prediction, target):
 # 修改-增加
 def v_mse(prediction, target):
     return squared_error(prediction["vector"], target["vector"])
+
+def d_mae(prediction, target):
+    return absolute_error(prediction["distance"], target["distance"])
+
+def d_mse(prediction, target):
+    return squared_error(prediction["distance"], target["distance"])
+
 
 
 def energy_force_within_threshold(

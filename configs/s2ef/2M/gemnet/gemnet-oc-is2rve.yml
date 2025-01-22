@@ -5,9 +5,9 @@ model:
   name: gemnet_is2rve
   num_spherical: 8
 #  num_radial: 255 # 为了适应vector边的嵌入维度
-  num_radial: 129
+  num_radial: 256
   num_blocks: 4
-  emb_size_atom: 256 # 256+128其中128为原子标签信息
+  emb_size_atom: 128 # 256+128其中128为原子标签信息
   emb_size_edge: 512
 #  emb_size_edge: 768 # 为了适应vector边的嵌入维度
   emb_size_trip_in: 64
@@ -25,10 +25,10 @@ model:
   num_atom: 3
   num_output_afteratom: 3
   cutoff: 8.0
-  cutoff_qint: 6.0
-  cutoff_aeaint: 6.0
+  cutoff_qint: 8.0
+  cutoff_aeaint: 8.0
   cutoff_aint: 8.0
-  max_neighbors: 10
+  max_neighbors: 30
   max_neighbors_qint: 8
   max_neighbors_aeaint: 20
   max_neighbors_aint: 1000
@@ -52,6 +52,8 @@ model:
   direct_forces: False
   forces_coupled: True
   update_v: True # 新增参数，是否预测坐标/向量
+  edge_mask: False # 是否对边进行筛选
+  edge_mask_tags: 0
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -64,8 +66,8 @@ model:
 #  qint_tags: [1, 2]
 
 optim:
-  batch_size: 12
-  eval_batch_size: 12
+  batch_size: 6
+  eval_batch_size: 6
   load_balancing: atoms
   eval_every: 2000
   num_workers: 2

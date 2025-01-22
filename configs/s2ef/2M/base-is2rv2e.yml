@@ -1,4 +1,4 @@
-trainer: is2rve # trainer名字
+trainer: is2rv2e # trainer名字
 
 dataset:
   - src: /home/wuyinkai/liud/dataset/OC20/is2re10k/select_data/tags/vector/train
