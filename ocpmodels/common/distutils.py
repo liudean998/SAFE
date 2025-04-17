@@ -97,6 +97,7 @@ def setup(config) -> None:
             init_method="env://",
         )
     else:
+        print(config)
         dist.init_process_group(
             backend=config["distributed_backend"], init_method="env://"
         )

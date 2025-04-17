@@ -201,13 +201,9 @@ class ForcesTrainer(BaseTrainer):
                     out["forces"]
                 )
             if per_image:
-                systemids = [
-                    str(i) + "_" + str(j)
-                    for i, j in zip(
-                        batch_list[0].sid.tolist(), batch_list[0].fid.tolist()
-                    )
-                ]
-                predictions["id"].extend(systemids)
+                predictions["id"].extend(
+                    [str(i) for i in batch_list[0].sid.tolist()]
+                )
                 batch_natoms = torch.cat(
                     [batch.natoms for batch in batch_list]
                 )

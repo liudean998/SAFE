@@ -646,6 +646,8 @@ class TripletInteraction(torch.nn.Module):
 
         # Transform via radial basis
         rad_emb = self.mlp_rbf(bases["rad"])  # (nEdges, emb_size_edge)
+        # import time
+        # time.sleep(1000)
         x_ba2 = x_ba * rad_emb
         x_ba = self.scale_rbf(x_ba2, ref=x_ba)
 

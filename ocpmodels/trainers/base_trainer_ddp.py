@@ -51,7 +51,7 @@ from ocpmodels.modules.scheduler import LRScheduler
 
 
 @registry.register_trainer("base")
-class BaseTrainer(ABC):
+class BaseTrainerDDP(ABC):
     @property
     def _unwrapped_model(self):
         module = self.model
@@ -87,6 +87,15 @@ class BaseTrainer(ABC):
         self.step = 0
 
         if torch.cuda.is_available() and not self.cpu:
+            print("LOCAL_RANK:", os.getenv("LOCAL_RANK"))
+            print("RANK:", os.getenv("RANK"))
+            print("WORLD_SIZE:", os.getenv("WORLD_SIZE"))
+            print("MASTER_ADDR:", os.getenv("MASTER_ADDR"))
+            print("MASTER_PORT:", os.getenv("MASTER_PORT"))
+            distutils.setup({'submit':False, 'summit': False,
+                             'distributed_backend': 'nccl',})
+            local_rank = int(os.environ["LOCAL_RANK"])  # 读取 GPU ID
+            torch.cuda.set_device(local_rank)  # 绑定当前进程到 GPU
             self.device = torch.device(f"cuda:{local_rank}")
         else:
             self.device = torch.device("cpu")

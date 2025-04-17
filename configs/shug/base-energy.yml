@@ -1,14 +1,15 @@
-trainer: forces
+trainer: energy
 
 dataset:
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/train
+  - src: /tmp/origin/train
     normalize_labels: False # 预测能量时，对能量进行标准化
 #    target_mean: -1.5260
 #    target_std: 2.2793
 #    grad_target_mean: 0.0
 #    grad_target_std: 2.887317180633545
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/val
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/test
+  - src: /tmp/origin/val
+  - src: /tmp/origin/test
+
 
 logger: tensorboard
 
@@ -19,8 +20,6 @@ task:
   metric: mae
   labels:
     - potential energy
-#  labels:
-#    positions potential energy
   grad_input: atomic forces
   train_on_free_atoms: True
   eval_on_free_atoms: True

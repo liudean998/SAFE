@@ -1,13 +1,15 @@
 includes:
-  - configs/s2ef/2M/base-energy.yml
+  - configs/s2ef/2M/base-is2rfse.yml
 
 model:
-  name: gemnet_oc
+  name: gemnet_is2rfse
   num_spherical: 7
-  num_radial: 128 #
+#  num_radial: 255 # 为了适应vector边的嵌入维度
+  num_radial: 256
   num_blocks: 4
-  emb_size_atom: 256 #
+  emb_size_atom: 128 # 256+128其中128为原子标签信息
   emb_size_edge: 512
+#  emb_size_edge: 768 # 为了适应vector边的嵌入维度
   emb_size_trip_in: 64
   emb_size_trip_out: 64
   emb_size_quad_in: 32
@@ -49,6 +51,8 @@ model:
   direct_forces: True
 #  direct_forces: False
   forces_coupled: True
+  update_v: True # 新增参数，是否预测坐标/向量
+  update_p: True
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -61,10 +65,10 @@ model:
 #  qint_tags: [1, 2]
 
 optim:
-  batch_size: 20 #
-  eval_batch_size: 50 #
+  batch_size: 32
+  eval_batch_size: 32
   load_balancing: atoms
-  eval_every: 1000
+  eval_every: 100
   num_workers: 2
   lr_initial: 1.e-3
   optimizer: AdamW
@@ -75,12 +79,15 @@ optim:
   factor: 0.8
   patience: 3
   max_epochs: 100
-  force_coefficient: 100
+  force_coefficient: 1
+  v_coefficient: 1
+  p_coefficient: 1
   energy_coefficient: 1
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
   loss_force: l2mae
-  loss_pos: mse_v
+  loss_vector: mae_v
   weight_decay: 0
-
+#  weight_decay: 0.1
+#  T_max: 2000000 # for CosineAnnealingLR

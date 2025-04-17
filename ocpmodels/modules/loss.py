@@ -30,11 +30,11 @@ class MaeV(nn.Module):
         diff = torch.abs(input-target)
         if weight is not None:
             diff = diff * weight.view(-1, 1)
-        return torch.mean(diff)
-        # if self.reduction == "mean":
-        #     return torch.mean(diff)
-        # elif self.reduction == "sum":
-        #     return torch.sum(diff)
+        if self.reduction == "mean":
+            return torch.mean(diff)
+        elif self.reduction == "sum":
+            diff = torch.sum(diff, dim=1)
+            return torch.sum(diff)# 修改逻辑，先对每行求和，再对所有行求平均值
 
 class MseV(nn.Module):
     def __init__(self, reduction: str = "mean") -> None:
@@ -104,8 +104,6 @@ class DDPLoss(nn.Module):
                 loss = self.loss_fn(input, target)
         else:  # atom-wise loss
             loss = self.loss_fn(input, target, natoms)
-        if self.loss_name in ['mse_v', 'mae_v']:
-            return loss
         if self.reduction == "mean":
             num_samples = (
                 batch_size if batch_size is not None else input.shape[0]

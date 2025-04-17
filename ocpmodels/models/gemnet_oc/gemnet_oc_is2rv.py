@@ -33,7 +33,7 @@ from .interaction_indices import (
     get_quadruplets,
     get_triplets,
 )
-from .layers.atom_update_block import OutputBlockMask
+from .layers.atom_update_block import OutputBlockMask, OutputBlock
 from .layers.base_layers import Dense, ResidualLayer
 from .layers.efficient import BasisEmbedding
 from .layers.embedding_block import AtomEmbedding, EdgeEmbedding, AtomEmbeddingTags, EdgeEmbeddingVectorDis
@@ -3093,12 +3093,12 @@ class GemNetOCRV2E(GemNetOC):
             emb_size_atom, num_radial, emb_size_edge, activation=activation
         )
         self.edge_emb_e = EdgeEmbedding(
-            emb_size_atom, num_radial, emb_size_edge, activation=activation
+            emb_size_atom_e, num_radial_e, emb_size_edge, activation=activation
         )
 
         # Interaction Blocks
         int_blocks = []
-        for _ in range(num_blocks):
+        for _ in range(3): # 先固定层数
             int_blocks.append(
                 InteractionBlock(
                     emb_size_atom=emb_size_atom,
@@ -3126,8 +3126,37 @@ class GemNetOCRV2E(GemNetOC):
             )
         self.int_blocks = torch.nn.ModuleList(int_blocks)
 
+        int_blocks_e = []
+        for _ in range(4): # 先固定层数
+            int_blocks_e.append(
+                InteractionBlock(
+                    emb_size_atom=emb_size_atom_e,
+                    emb_size_edge=emb_size_edge,
+                    emb_size_trip_in=emb_size_trip_in,
+                    emb_size_trip_out=emb_size_trip_out,
+                    emb_size_quad_in=emb_size_quad_in,
+                    emb_size_quad_out=emb_size_quad_out,
+                    emb_size_a2a_in=emb_size_aint_in,
+                    emb_size_a2a_out=emb_size_aint_out,
+                    emb_size_rbf=emb_size_rbf,
+                    emb_size_cbf=emb_size_cbf,
+                    emb_size_sbf=emb_size_sbf,
+                    num_before_skip=num_before_skip,
+                    num_after_skip=num_after_skip,
+                    num_concat=num_concat,
+                    num_atom=num_atom,
+                    num_atom_emb_layers=num_atom_emb_layers,
+                    quad_interaction=quad_interaction,
+                    atom_edge_interaction=atom_edge_interaction,
+                    edge_atom_interaction=edge_atom_interaction,
+                    atom_interaction=atom_interaction,
+                    activation=activation,
+                )
+            )
+        self.int_blocks_e = torch.nn.ModuleList(int_blocks_e)
+
         out_blocks = []
-        for _ in range(num_blocks + 2):
+        for _ in range(4):
             out_blocks.append(
                 OutputBlockMask(
                     emb_size_atom=emb_size_atom,
@@ -3142,24 +3171,39 @@ class GemNetOCRV2E(GemNetOC):
             )
         self.out_blocks = torch.nn.ModuleList(out_blocks)
 
+        out_blocks_e = []
+        for _ in range(5):
+            out_blocks_e.append(
+                OutputBlock(
+                    emb_size_atom=emb_size_atom_e,
+                    emb_size_edge=emb_size_edge,
+                    emb_size_rbf=emb_size_rbf,
+                    nHidden=num_atom,
+                    nHidden_afteratom=num_output_afteratom,
+                    activation=activation,
+                    direct_forces=direct_forces,
+                )
+            )
+        self.out_blocks_e = torch.nn.ModuleList(out_blocks_e)
+
         # 能量输出
         out_mlp_E = [
                         Dense(
                             # emb_size_atom * (num_blocks + 1),
-                            emb_size_atom * (3 + 1), # 先固定层数
-                            emb_size_atom,
+                            emb_size_atom_e * (3 + 1), # 先固定层数
+                            emb_size_atom_e,
                             activation=activation,
                         )
                     ] + [
                         ResidualLayer(
-                            emb_size_atom,
+                            emb_size_atom_e,
                             activation=activation,
                         )
                         for _ in range(num_global_out_layers)
                     ]
         self.out_mlp_E = torch.nn.Sequential(*out_mlp_E)
         self.out_energy = Dense(
-            emb_size_atom, num_targets, bias=False, activation=None
+            emb_size_atom_e, num_targets, bias=False, activation=None
         )
         if self.update_v:
             # vecor输出
@@ -3167,7 +3211,7 @@ class GemNetOCRV2E(GemNetOC):
                             Dense(
                                 # emb_size_edge * (num_blocks + 1),
                                 # 先固定层数，Vetor交互两次，输出三次，energy交互三次输出4次
-                                emb_size_edge * (2 + 1),
+                                emb_size_edge * (3 + 1),
                                 emb_size_edge,
                                 activation=activation,
                             )
@@ -3435,32 +3479,32 @@ class GemNetOCRV2E(GemNetOC):
         )
 
         # Set shared parameters for better gradients
-        self.shared_parameters = [
-            (self.mlp_rbf_tint.linear.weight, self.num_blocks_e),
-            (self.mlp_cbf_tint.weight, self.num_blocks_e),
-            (self.mlp_rbf_h.linear.weight, self.num_blocks_e),
-            (self.mlp_rbf_out.linear.weight, self.num_blocks_e + 1),
-        ]
-        if self.quad_interaction:
-            self.shared_parameters += [
-                (self.mlp_rbf_qint.linear.weight, self.num_blocks_e),
-                (self.mlp_cbf_qint.weight, self.num_blocks_e),
-                (self.mlp_sbf_qint.weight, self.num_blocks_e),
-            ]
-        if self.atom_edge_interaction:
-            self.shared_parameters += [
-                (self.mlp_rbf_aeint.linear.weight, self.num_blocks_e),
-                (self.mlp_cbf_aeint.weight, self.num_blocks_e),
-            ]
-        if self.edge_atom_interaction:
-            self.shared_parameters += [
-                (self.mlp_rbf_eaint.linear.weight, self.num_blocks_e),
-                (self.mlp_cbf_eaint.weight, self.num_blocks_e),
-            ]
-        if self.atom_interaction:
-            self.shared_parameters += [
-                (self.mlp_rbf_aint.weight, self.num_blocks_e),
-            ]
+        # self.shared_parameters = [
+        #     (self.mlp_rbf_tint.linear.weight, self.num_blocks_e),
+        #     (self.mlp_cbf_tint.weight, self.num_blocks_e),
+        #     (self.mlp_rbf_h.linear.weight, self.num_blocks_e),
+        #     (self.mlp_rbf_out.linear.weight, self.num_blocks_e + 1),
+        # ]
+        # if self.quad_interaction:
+        #     self.shared_parameters += [
+        #         (self.mlp_rbf_qint.linear.weight, self.num_blocks_e),
+        #         (self.mlp_cbf_qint.weight, self.num_blocks_e),
+        #         (self.mlp_sbf_qint.weight, self.num_blocks_e),
+        #     ]
+        # if self.atom_edge_interaction:
+        #     self.shared_parameters += [
+        #         (self.mlp_rbf_aeint.linear.weight, self.num_blocks_e),
+        #         (self.mlp_cbf_aeint.weight, self.num_blocks_e),
+        #     ]
+        # if self.edge_atom_interaction:
+        #     self.shared_parameters += [
+        #         (self.mlp_rbf_eaint.linear.weight, self.num_blocks_e),
+        #         (self.mlp_cbf_eaint.weight, self.num_blocks_e),
+        #     ]
+        # if self.atom_interaction:
+        #     self.shared_parameters += [
+        #         (self.mlp_rbf_aint.weight, self.num_blocks_e),
+        #     ]
 
     def get_graphs_and_indices_lmdb(self, data):
         # main_graph使用lmdb中定义的图结构
@@ -3900,8 +3944,8 @@ class GemNetOCRV2E(GemNetOC):
         bases_qint = {}
         bases_a2e = {}
         if self.atom_edge_interaction:
-            bases_a2e["rad"] = self.mlp_rbf_aeint(basis_rad_a2ee2a_raw)
-            bases_a2e["cir"] = self.mlp_cbf_aeint(
+            bases_a2e["rad"] = self.mlp_rbf_aeint_e(basis_rad_a2ee2a_raw)
+            bases_a2e["cir"] = self.mlp_cbf_aeint_e(
                 rad_basis=basis_rad_cir_a2e_raw,
                 sph_basis=basis_cir_a2e_raw,
                 idx_sph_outer=trip_idx_a2e["out"],
@@ -3909,8 +3953,8 @@ class GemNetOCRV2E(GemNetOC):
             )
         bases_e2a = {}
         if self.edge_atom_interaction:
-            bases_e2a["rad"] = self.mlp_rbf_eaint(basis_rad_main_raw)
-            bases_e2a["cir"] = self.mlp_cbf_eaint(
+            bases_e2a["rad"] = self.mlp_rbf_eaint_e(basis_rad_main_raw)
+            bases_e2a["cir"] = self.mlp_cbf_eaint_e(
                 rad_basis=basis_rad_cir_e2a_raw,
                 sph_basis=basis_cir_e2a_raw,
                 idx_rad_outer=a2ee2a_graph["edge_index"][1],
@@ -3920,7 +3964,7 @@ class GemNetOCRV2E(GemNetOC):
                 num_atoms=num_atoms,
             )
         if self.atom_interaction:
-            basis_a2a_rad = self.mlp_rbf_aint(
+            basis_a2a_rad = self.mlp_rbf_aint_e(
                 rad_basis=basis_rad_a2a_raw,
                 idx_rad_outer=a2a_graph["edge_index"][1],
                 idx_rad_inner=a2a_graph["target_neighbor_idx"],
@@ -3930,16 +3974,16 @@ class GemNetOCRV2E(GemNetOC):
             basis_a2a_rad = None
 
         bases_e2e = {}
-        bases_e2e["rad"] = self.mlp_rbf_tint(basis_rad_main_raw)
-        bases_e2e["cir"] = self.mlp_cbf_tint(
+        bases_e2e["rad"] = self.mlp_rbf_tint_e(basis_rad_main_raw)
+        bases_e2e["cir"] = self.mlp_cbf_tint_e(
             rad_basis=basis_rad_cir_e2e_raw,
             sph_basis=basis_cir_e2e_raw,
             idx_sph_outer=trip_idx_e2e["out"],
             idx_sph_inner=trip_idx_e2e["out_agg"],
         )
 
-        basis_atom_update = self.mlp_rbf_h(basis_rad_main_raw)
-        basis_output = self.mlp_rbf_out(basis_rad_main_raw)
+        basis_atom_update = self.mlp_rbf_h_e(basis_rad_main_raw)
+        basis_output = self.mlp_rbf_out_e(basis_rad_main_raw)
 
         return (
             basis_rad_main_raw,
@@ -3970,7 +4014,7 @@ class GemNetOCRV2E(GemNetOC):
             trip_idx_a2e,
             trip_idx_e2a,
             quad_idx,
-        ) = self.get_graphs_and_indices_lmdb(data) # 使用数据集中的图结构为main_graph
+        ) = self.get_graphs_and_indices_lmdb(data)  # 使用数据集中的图结构为main_graph
         _, idx_t = main_graph["edge_index"]
         (
             basis_rad_raw,
@@ -4011,17 +4055,15 @@ class GemNetOCRV2E(GemNetOC):
         else:
             mask = None
         tags_mask = None
-
-        x_E, x_F, x_V = self.out_blocks[0](h, m, basis_output, idx_t,
-                                           mask=mask,
-                                           tags_mask=tags_mask,
-                                           out_vector=True,
-                                           out_energy=False)
+        _, _, x_V = self.out_blocks[0](h, m, basis_output, idx_t,
+                                       mask=mask,
+                                       tags_mask=tags_mask,
+                                       out_vector=True,
+                                       out_energy=False)
         # (nEdges, emb_size_edge)
         xs_V = [x_V]
         # xs_E = [x_E] # 先以原始数据输出一次E
-
-        for i in range(3): # 先固定层数
+        for i in range(3):  # 先固定层数
             # Interaction block
             h, m = self.int_blocks[i](
                 h=h,
@@ -4041,30 +4083,28 @@ class GemNetOCRV2E(GemNetOC):
                 trip_idx_e2a=trip_idx_e2a,
                 quad_idx=quad_idx,
             )  # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
-
-            x_E, x_F, x_V = self.out_blocks[i + 1](h, m, basis_output, idx_t,
-                                                   mask=mask,
-                                                   tags_mask=tags_mask,
-                                                   out_vector=True,
-                                                   out_energy=False)
+            _, _, x_V = self.out_blocks[i + 1](h, m, basis_output, idx_t,
+                                               mask=mask,
+                                               tags_mask=tags_mask,
+                                               out_vector=True,
+                                               out_energy=False)
             # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
             xs_V.append(x_V)
         if self.update_v:
             x_V = self.out_mlp_V(torch.cat(xs_V, dim=-1))
             V_t = self.out_v(x_V)
             # P_t = P_t.squeeze(1) # batch 3
-            V_t = V_t.squeeze(1) # batch 3
+            V_t = V_t.squeeze(1)  # batch 3
         else:
             V_t = None
-
-        # ----------------- 能量预测部分 --------------------------------
-        main_graph['vector'] = V_t
+        # ---------------- 能量预测部分 --------------------------------
+        main_graph['vector'] = V_t.clone()
         # main_graph =self.sort_by_edge_index(main_graph)
         (
             main_graph_e,
             a2a_graph_e,
             a2ee2a_graph_e,
-            id_swap,
+            id_swap_e,
             trip_idx_e2e_e,
             trip_idx_a2e_e,
             trip_idx_e2a_e,
@@ -4091,15 +4131,13 @@ class GemNetOCRV2E(GemNetOC):
             quad_idx=None,
             num_atoms=num_atoms,
         )
-        h_e = self.atom_emb(atomic_numbers)
-        # print(basis_rad_raw_e.shape, main_graph['distance'].shape, main_graph['edge_index'].shape)
-        m_e = self.edge_emb(h_e, basis_rad_raw_e, main_graph_e['edge_index'])
+        h_e = self.atom_emb_e(atomic_numbers)
+        m_e = self.edge_emb_e(h_e, basis_rad_raw_e, main_graph_e['edge_index'])
         xs_E = []
-        x_E, x_F = self.out_blocks[4](h_e, m_e, basis_output_e, idx_t_e,
-                                           out_vector=False)
+        x_E, _ = self.out_blocks_e[0](h_e, m_e, basis_output_e, idx_t_e)
         xs_E.append(x_E)
-        for i in range(3, 6):
-            h_e, m_e = self.int_blocks[i](
+        for i in range(3):
+            h_e, m_e = self.int_blocks_e[i](
                 h=h_e,
                 m=m_e,
                 bases_qint=None,
@@ -4111,13 +4149,13 @@ class GemNetOCRV2E(GemNetOC):
                 edge_index_main=main_graph_e["edge_index"],
                 a2ee2a_graph=a2ee2a_graph_e,
                 a2a_graph=a2a_graph_e,
-                id_swap=id_swap,
+                id_swap=id_swap_e,
                 trip_idx_e2e=trip_idx_e2e_e,
                 trip_idx_a2e=trip_idx_a2e_e,
                 trip_idx_e2a=trip_idx_e2a_e,
                 quad_idx=None,
             )
-            x_E, x_F = self.out_blocks[i+1](h_e, m_e, basis_output_e, idx_t_e)
+            x_E, x_F = self.out_blocks_e[i+1](h_e, m_e, basis_output_e, idx_t_e)
             xs_E.append(x_E)
         # for i in xs_E:
         #     print(i.shape)

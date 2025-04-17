@@ -6,6 +6,7 @@ LICENSE file in the root directory of this source tree.
 
 import logging
 import os
+import time
 from typing import Dict, Optional, Union
 
 import numpy as np
@@ -48,71 +49,6 @@ from .utils import (
     mask_neighbors,
     repeat_blocks,
 )
-
-
-class AdsorbateCatalystInteraction(nn.Module):
-    def __init__(self, emb_size_atom, emb_size_adsorbate, conv_out_channels, final_emb_size):
-        super(AdsorbateCatalystInteraction, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(2, 1), padding=(0, 0))
-        # self.conv2 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(2, 1), padding=(0, 0))
-        # self.conv3 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(3, 1), padding=(1, 0))
-        self.activation = nn.ReLU()
-        # self.global_avg_pool = nn.AdaptiveAvgPool2d((1, final_emb_size))
-        self.emb_size_atom = emb_size_atom
-        self.emb_size_adsorbate = emb_size_adsorbate
-        self.ads_feature_transform = nn.Linear(emb_size_adsorbate, emb_size_atom)
-
-    def forward(self, x_E, ads_features, batch):
-        final_x_E_list = []
-
-        for i in torch.unique(batch):
-            mask = batch == i
-            x_E_sample = x_E[mask].unsqueeze(0).unsqueeze(0)  # 调整 x_E 维度 [1, 1, n, 256]
-            # print(x_E_sample.shape)
-            ads_features_transformed_sample = self.ads_feature_transform(ads_features[i].unsqueeze(0)).unsqueeze(0).unsqueeze(2)  # [1, 1, 1, 256]
-            # print(ads_features_transformed_sample.shape)
-            x_E_with_ads = torch.cat([x_E_sample, ads_features_transformed_sample], dim=2)  # [1, 1, n+1, 256]
-            x = self.conv1(x_E_with_ads)
-            x = self.activation(x)
-            # x = self.conv2(x)
-            # x = self.activation(x)
-            # x = self.conv3(x)
-            # x = self.activation(x)
-            # x = self.global_avg_pool(x)
-            x = x.squeeze(0).squeeze(0)  # [n+1, 256]
-
-            # final_x_E_list.append(x[:-1])  # 删除最后一行吸附剂特征向量
-            final_x_E_list.append(x)
-        final_x_E_combined = torch.cat(final_x_E_list, dim=0)
-        return final_x_E_combined
-
-
-# class AdsorbateCatalystInteraction(nn.Module):
-#     def __init__(self, emb_size_atom, emb_size_adsorbate, num_heads, num_layers, final_emb_size):
-#         super(AdsorbateCatalystInteraction, self).__init__()
-#         self.emb_size_atom = emb_size_atom
-#         self.emb_size_adsorbate = emb_size_adsorbate
-#
-#         self.ads_feature_transform = nn.Linear(emb_size_adsorbate, emb_size_atom)
-#         encoder_layer = nn.TransformerEncoderLayer(d_model=emb_size_atom, nhead=num_heads, batch_first=True)
-#         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-#         self.final_layer = nn.Linear(emb_size_atom, final_emb_size)
-#
-#     def forward(self, x_E, ads_features, batch):
-#         final_x_E_list = []
-#
-#         for i in torch.unique(batch):
-#             mask = batch == i
-#             x_E_sample = x_E[mask].unsqueeze(0)  # 调整 x_E 维度 [1, n, 256]
-#             ads_features_transformed = self.ads_feature_transform(ads_features[i].unsqueeze(0)).unsqueeze(
-#                 1)  # [1, 1, 256]
-#             x_E_with_ads = torch.cat([x_E_sample, ads_features_transformed], dim=1)  # [1, n+1, 256]
-#             transformer_out = self.transformer_encoder(x_E_with_ads)
-#             final_x_E = self.final_layer(transformer_out).squeeze(0)  # [n+1, 256]
-#             final_x_E_list.append(final_x_E[:-1])  # 删除最后一行吸附剂特征向量
-#
-#         final_x_E_combined = torch.cat(final_x_E_list, dim=0)
-#         return final_x_E_combined
 
 
 @registry.register_model("gemnet_oc")
@@ -1296,6 +1232,7 @@ class GemNetOC(BaseModel):
 
     @conditional_grad(torch.enable_grad())
     def forward(self, data):
+        # print('start', time.strftime("%H:%M:%S", time.localtime()))
         pos = data.pos
         batch = data.batch
         atomic_numbers = data.atomic_numbers.long()
@@ -1426,9 +1363,11 @@ class GemNetOC(BaseModel):
 
             E_t = E_t.squeeze(1)  # (num_molecules)
             F_t = F_t.squeeze(1)  # (num_atoms, 3)
+            # print('end', time.strftime("%H:%M:%S", time.localtime()))
             return E_t, F_t
         else:
             E_t = E_t.squeeze(1)  # (num_molecules)
+            # print('end', time.strftime("%H:%M:%S", time.localtime()))
             return E_t
 #     #
     # @property
@@ -1437,7 +1376,7 @@ class GemNetOC(BaseModel):
 
 
 @registry.register_model("gemnet_oc_test")
-class GemNetOC(BaseModel):
+class GemNetOCT(BaseModel):
     """
     Arguments
     ---------

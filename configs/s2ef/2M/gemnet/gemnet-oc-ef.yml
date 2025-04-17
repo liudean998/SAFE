@@ -24,13 +24,13 @@ model:
   num_concat: 1
   num_atom: 3
   num_output_afteratom: 3
-  cutoff: 6.0
-  cutoff_qint: 6.0
-  cutoff_aeaint: 6.0
-  cutoff_aint: 6.0
+  cutoff: 8.0
+  cutoff_qint: 8.0
+  cutoff_aeaint: 8.0
+  cutoff_aint: 8.0
   max_neighbors: 30
   max_neighbors_qint: 8
-  max_neighbors_aeaint: 10
+  max_neighbors_aeaint: 20
   max_neighbors_aint: 1000
   rbf:
     name: gaussian
@@ -48,10 +48,9 @@ model:
 
   regress_forces: True
 #  regress_forces: False
-#  direct_forces: True
-  direct_forces: False
+  direct_forces: True
+#  direct_forces: False
   forces_coupled: False
-  update_pos: False # 新增参数，是否预测坐标/向量
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -64,12 +63,12 @@ model:
 #  qint_tags: [1, 2]
 
 optim:
-  batch_size: 4
-  eval_batch_size: 2
+  batch_size: 20
+  eval_batch_size: 50
   load_balancing: atoms
-  eval_every: 1
+  eval_every: 1000
   num_workers: 2
-  lr_initial: 1.e-4
+  lr_initial: 1.e-3
   optimizer: AdamW
   optimizer_params: {"amsgrad": True}
   scheduler: ReduceLROnPlateau
@@ -78,14 +77,11 @@ optim:
   factor: 0.8
   patience: 3
   max_epochs: 100
-  force_coefficient: 100
+  force_coefficient: 1
   pos_coefficient: 1
   energy_coefficient: 1
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
   loss_force: l2mae
-#  loss_pos: mse_v
   weight_decay: 0
-#  weight_decay: 0.1
-#  T_max: 2000000 # for CosineAnnealingLR

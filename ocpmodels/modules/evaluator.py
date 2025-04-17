@@ -53,6 +53,23 @@ class Evaluator:
             "energy_mae",
             "energy_mse",
         ], # 增加
+        "is2rse": [
+            "energy_mae",
+            "energy_mse",
+            "v_mae",
+            "v_mse",
+            "positions_mae",
+            "positions_mse",
+        ],  # 增加
+        "is2rse1": [
+            "energy_mae",
+            "energy_mse",
+            "v_mae",
+            "v_mse",
+            "positions_mae",
+            "positions_mse",
+            "d_mae"
+        ],  # 增加
         "is2rv":[
             "v_mae",
             "v_mse",
@@ -64,28 +81,45 @@ class Evaluator:
             "d_mse"
         ],
         "is2re": ["energy_mae", "energy_mse", "energy_within_threshold"],
+        "is2rfse": [ # 先把mse注销
+            "energy_mae",
+            # "energy_mse",
+            "v_mae",
+            # "v_mse",
+            "positions_mae",
+            # "positions_mse",
+            "forces_mae",
+        ],  # 增加
     }
 
-    task_attributes = {
+    task_attributes = { # 检查输出有没有缺少某些属性
         "s2ef": ["energy", "forces", "natoms"],
         "is2rs": ["positions", "cell", "pbc", "natoms"],
         "is2rv": ["vector"], # 增加
         "is2rvd": ["vector","distance"], # 增加
         "is2rve": ["vector", "energy"], # 增加
+        "is2rse": ["vector", "energy", "positions"], # 增加
+        "is2rse1": ["vector", "energy", "positions","distance"], # 增加
         "is2re": ["energy"],
+        "is2rfse": ["vector", "energy", "positions", "forces", "natoms"],
     }
 
     task_primary_metric = { # 主要评价函数，以此判断最佳值，保存结果
-        "s2ef": "energy_force_within_threshold",
+        # "s2ef": "energy_force_within_threshold",
+        "s2ef": "energy_mae", # 修改
         # "is2rs": "average_distance_within_threshold",
         "is2rv": "v_mae", # 修改
         "is2rvd": "loss", # 修改
         "is2rve": "energy_mae", # 修改
+        "is2rse": "energy_mae", # 修改
+        "is2rse1": "energy_mae", # 修改
         "is2re": "energy_mae",
+        "is2rfse": "energy_mae",
     }
 
     def __init__(self, task: str) -> None:
-        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rvd', 'is2rve'] # 增加
+        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rvd', 'is2rve',
+                        'is2rse','is2rse1', 'is2rfse'] # 增加
         self.task = task
         self.metric_fn = self.task_metrics[task]
 
@@ -164,8 +198,21 @@ def forcesz_mse(prediction, target):
 
 
 def forces_mae(prediction, target):
-    return absolute_error(prediction["forces"], target["forces"])
-
+    # if prediction['forces'].shape[0]:
+    #     return absolute_error(prediction["forces"], target["forces"])
+    # else:
+    #     return 0
+    if prediction['forces'].shape[0]:
+        diff = torch.abs(prediction["forces"] - target["forces"])
+        diff = torch.sum(diff, dim=1)
+        diff = torch.sum(diff)
+        return {
+            "metric": torch.mean(diff),
+            "total": diff,
+            "numel": prediction["forces"].shape[0]
+        }
+    else:
+        return 0
 
 def forces_mse(prediction, target):
     return squared_error(prediction["forces"], target["forces"])
@@ -180,18 +227,52 @@ def forces_magnitude(prediction, target):
 
 
 def positions_mae(prediction, target):
-    return absolute_error(prediction["positions"], target["positions"])
-
+    # if prediction["positions"].shape[0]:
+    #     return absolute_error(prediction["positions"], target["positions"])
+    # else:
+    #     return 0
+    if prediction["positions"].shape[0]:
+        diff = torch.abs(prediction["positions"] - target["positions"])
+        diff = torch.sum(diff, dim=1)
+        diff = torch.sum(diff)
+        return {
+            "metric": torch.mean(diff),
+            "total": diff,
+            "numel": prediction["positions"].shape[0]
+        }
+    else:
+        return 0
 
 def positions_mse(prediction, target):
-    return squared_error(prediction["positions"], target["positions"])
+    if prediction["positions"].shape[0]:
+        return squared_error(prediction["positions"], target["positions"])
+    else:
+        return 0
 
 # 修改-增加
 def v_mae(prediction, target):
-    return absolute_error(prediction["vector"], target["vector"])
+    # if prediction['vector'].shape[0]:
+    #     return absolute_error(prediction["vector"], target["vector"])
+    # else:
+    #     return 0
+    if prediction['vector'].shape[0]:
+        diff = torch.abs(prediction["vector"] - target["vector"])
+        diff = torch.sum(diff, dim=1)
+        diff = torch.sum(diff)
+        return {
+            "metric": torch.mean(diff),
+            "total": diff,
+            "numel": prediction["vector"].shape[0]
+        }
+    else:
+        return 0
+
 # 修改-增加
 def v_mse(prediction, target):
-    return squared_error(prediction["vector"], target["vector"])
+    if prediction['vector'].shape[0]:
+        return squared_error(prediction["vector"], target["vector"])
+    else:
+        return 0
 
 def d_mae(prediction, target):
     return absolute_error(prediction["distance"], target["distance"])
@@ -323,7 +404,15 @@ def absolute_error(
         "total": torch.sum(error).item(),
         "numel": prediction.numel(),
     }
-
+def absolute_error_vec(
+    prediction: torch.Tensor, target: torch.Tensor
+) -> Dict[str, Union[float, int]]:
+    error = torch.abs(target - prediction)
+    return {
+        "metric": torch.mean(error).item(),
+        "total": torch.sum(error).item(),
+        "numel": prediction.numel(),
+    }
 
 def squared_error(
     prediction: torch.Tensor, target: torch.Tensor

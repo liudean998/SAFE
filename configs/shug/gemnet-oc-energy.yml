@@ -1,5 +1,5 @@
 includes:
-  - configs/s2ef/2M/base-energy.yml
+  - configs/shug/base-energy.yml
 
 model:
   name: gemnet_oc
@@ -44,10 +44,10 @@ model:
   activation: silu
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
-  regress_forces: True
-#  regress_forces: False
-  direct_forces: True
-#  direct_forces: False
+#  regress_forces: True
+  regress_forces: False
+#  direct_forces: True
+  direct_forces: False
   forces_coupled: True
 
   quad_interaction: False
@@ -61,12 +61,12 @@ model:
 #  qint_tags: [1, 2]
 
 optim:
-  batch_size: 20 #
-  eval_batch_size: 50 #
+  batch_size: 150 #
+  eval_batch_size: 200 #
   load_balancing: atoms
-  eval_every: 1000
-  num_workers: 2
-  lr_initial: 1.e-3
+  eval_every: 300 #
+  num_workers: 6 #
+  lr_initial: 5.e-4
   optimizer: AdamW
   optimizer_params: {"amsgrad": True}
   scheduler: ReduceLROnPlateau
@@ -83,4 +83,5 @@ optim:
   loss_force: l2mae
   loss_pos: mse_v
   weight_decay: 0
-
+#  weight_decay: 0.1
+#  T_max: 2000000 # for CosineAnnealingLR
