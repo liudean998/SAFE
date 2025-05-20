@@ -40,7 +40,7 @@ def _train_batch(trainer: "BaseTrainer", batch) -> None:
         del out, loss
 
 
-def main(*, num_batches: int = 16) -> None:
+def main(*, num_batches: int = 195) -> None:
     # region args/config setup
     setup_logging()
 
@@ -49,21 +49,20 @@ def main(*, num_batches: int = 16) -> None:
     _config = build_config(args, override_args)
     _config["logger"] = "tensorboard"
     # endregion
-
     assert not args.distributed, "This doesn't work with DDP"
     with new_trainer_context(args=args, config=_config) as ctx:
         config = ctx.config
         trainer = ctx.trainer
 
-        ckpt_file = config.get("checkpoint", None)
-        assert (
-            ckpt_file is not None
-        ), "Checkpoint file not specified. Please specify --checkpoint <path>"
-        ckpt_file = Path(ckpt_file)
-
-        logging.info(
-            f"Input checkpoint path: {ckpt_file}, {ckpt_file.exists()=}"
-        )
+        # ckpt_file = config.get("checkpoint", None)
+        # assert (
+        #     ckpt_file is not None
+        # ), "Checkpoint file not specified. Please specify --checkpoint <path>"
+        # ckpt_file = Path(ckpt_file)
+        #
+        # logging.info(
+        #     f"Input checkpoint path: {ckpt_file}, {ckpt_file.exists()=}"
+        # )
 
         model: nn.Module = trainer.model
         val_loader = trainer.val_loader
@@ -71,8 +70,8 @@ def main(*, num_batches: int = 16) -> None:
             val_loader is not None
         ), "Val dataset is required for making predictions"
 
-        if ckpt_file.exists():
-            trainer.load_checkpoint(checkpoint_path=str(ckpt_file))
+        # if ckpt_file.exists():
+        #     trainer.load_checkpoint(checkpoint_path=str(ckpt_file))
 
         # region reoad scale file contents if necessary
         # unwrap module from DP/DDP
@@ -134,11 +133,14 @@ def main(*, num_batches: int = 16) -> None:
         # endregion
 
         # region get the output path
+        # out_path = Path(
+        #     _prefilled_input(
+        #         "Enter output path for fitted scale factors: ",
+        #         prefill=str('/home/wuyinkai/liud/ocp/configs/s2ef/all/gemnet/scale_test/all_4g_32b'),
+        #     )
+        # )
         out_path = Path(
-            _prefilled_input(
-                "Enter output path for fitted scale factors: ",
-                prefill=str(ckpt_file),
-            )
+                '/home/wuyinkai/liud/ocp/configs/s2ef/all/gemnet/scale_test/all_4g_32b'
         )
         if out_path.exists():
             logging.warning(f"Already found existing file: {out_path}")

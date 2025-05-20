@@ -2,7 +2,7 @@ includes:
   - configs/s2ef/2M/base-is2rse1.yml
 
 model:
-  name: gemnet_is2rse2
+  name: gemnet_is2rse1
   num_spherical: 7
   num_radial: 128 #
   num_blocks: 4

@@ -36,7 +36,7 @@ from .interaction_indices import (
 from .layers.atom_update_block import OutputBlockMask, OutputBlock
 from .layers.base_layers import Dense, ResidualLayer
 from .layers.efficient import BasisEmbedding
-from .layers.embedding_block import AtomEmbedding, EdgeEmbedding, AtomEmbeddingTags, EdgeEmbeddingVectorDis
+from .layers.embedding_block import AtomEmbedding, EdgeEmbedding, AtomEmbeddingTags
 from .layers.force_scaler import ForceScaler
 from .layers.interaction_block import InteractionBlock
 from .layers.radial_basis import RadialBasis

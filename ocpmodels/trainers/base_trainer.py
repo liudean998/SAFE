@@ -87,6 +87,14 @@ class BaseTrainer(ABC):
         self.step = 0
 
         if torch.cuda.is_available() and not self.cpu:
+            ####修改，适配torchrun
+            world_size = os.getenv("WORLD_SIZE")
+            if world_size is not None:
+                distutils.setup({'submit': False, 'summit': False,
+                                 'distributed_backend': 'nccl', })
+                local_rank = int(os.environ["LOCAL_RANK"])  # 读取 GPU ID
+                torch.cuda.set_device(local_rank)  # 绑定当前进程到 GPU
+            ####
             self.device = torch.device(f"cuda:{local_rank}")
         else:
             self.device = torch.device("cpu")

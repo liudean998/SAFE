@@ -1,12 +1,12 @@
 trainer: is2rse # trainer名字
 
 dataset:
-  - src: /tmp/vector/train
-    normalize_labels: False # 标准化开关
-#    target_mean: -1.3742
-#    target_std: 2.0359
-  - src: /tmp/vector/val
-  - src: /tmp/vector/test
+  - src: /tmp/origin/train
+    normalize_labels: True # 标准化开关
+    target_mean: -1.5260
+    target_std: 2.2793
+  - src: /tmp/origin/val
+  - src: /tmp/origin/test
 
 
 logger: tensorboard

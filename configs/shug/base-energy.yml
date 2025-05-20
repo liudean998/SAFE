@@ -2,9 +2,9 @@ trainer: energy
 
 dataset:
   - src: /tmp/origin/train
-    normalize_labels: False # 预测能量时，对能量进行标准化
-#    target_mean: -1.5260
-#    target_std: 2.2793
+    normalize_labels: True # 预测能量时，对能量进行标准化
+    target_mean: -1.5260
+    target_std: 2.2793
 #    grad_target_mean: 0.0
 #    grad_target_std: 2.887317180633545
   - src: /tmp/origin/val
