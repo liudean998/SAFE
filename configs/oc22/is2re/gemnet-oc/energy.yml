@@ -43,7 +43,7 @@ model:
   output_init: HeOrthogonal
   activation: silu
   otf_graph: True
-  scale_file: configs/oc22/scaling_factors/energy_16b.pt
+  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
 #  regress_forces: True
   regress_forces: False
@@ -61,9 +61,9 @@ model:
 
 optim:
   batch_size: 8
-  eval_batch_size: 8
+  eval_batch_size: 16
   load_balancing: atoms
-  eval_every: 5000
+  eval_every: 2000
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW

@@ -1,0 +1,19 @@
+trainer: is2rs # trainer名字
+
+dataset:
+  - src: /data2/liud/dataset/OC20/is2re/origin/train
+    normalize_labels: False # 标准化开关
+  - src: /data2/liud/dataset/OC20/is2re/origin/val
+
+
+logger: tensorboard
+
+task:
+  dataset: trajectory_lmdb
+  description: "Regressing to energies and forces for DFT trajectories from OCP"
+  type: regression
+  metric: mae
+  grad_input: atomic forces
+  train_on_free_atoms: True
+  eval_on_free_atoms: True
+  primary_metric: average_distance_within_threshold

@@ -1,8 +1,8 @@
 includes:
-  - configs/s2ef/2M/base-is2rse1.yml
+  - configs/is2rs/base-is2rs.yml
 
 model:
-  name: gemnet_is2rse_tags_dict
+  name: gemnet_is2rs
   num_spherical: 7
   num_radial: 128 #
   num_blocks: 4
@@ -43,30 +43,35 @@ model:
   output_init: HeOrthogonal
   activation: silu
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
+  otf_graph: True #
 
-#  regress_forces: True
   regress_forces: False
-#  direct_forces: True
+#  regress_forces: True
   direct_forces: False
+#  direct_forces: True
   forces_coupled: True
-  update_v: True # 新增参数，是否预测坐标/向量
+
+  update_v: False # 新增参数，是否预测坐标/向量
+#  update_v: True
+#  update_p: False
   update_p: True
 
   quad_interaction: False
+#  quad_interaction: True
   atom_edge_interaction: True
   edge_atom_interaction: True
   atom_interaction: True
 
   num_atom_emb_layers: 2
   num_global_out_layers: 2
-  qint_tags: [0, 1]
-#  qint_tags: [1, 2]
+#  qint_tags: [0, 1]
+  qint_tags: [1, 2]
 
 optim:
-  batch_size: 32
-  eval_batch_size: 32
+  batch_size: 8 # 每个卡的batch大小
+  eval_batch_size: 8
   load_balancing: atoms
-  eval_every: 1000
+  eval_every: 5000
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
@@ -75,14 +80,15 @@ optim:
   mode: min
   factor: 0.8
   patience: 3
-  max_epochs: 100
+  max_epochs: 300
   force_coefficient: 1
-  v_coefficient: 1
-  p_coefficient: 1
-  energy_coefficient: 1
+  graph_coefficient: 1
+  pos_coefficient: 1
+  energy_coefficient: 10 #
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
-  loss_force: l2mae
+  loss_force: mae_v
   loss_vector: mae_v
+  loss_positions: mae_v
   weight_decay: 0

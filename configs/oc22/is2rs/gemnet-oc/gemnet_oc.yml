@@ -1,12 +1,12 @@
 includes:
-  - configs/s2ef/2M/base-is2rse1.yml
+  - configs/oc22/is2rs/base.yml
 
 model:
-  name: gemnet_is2rse_tags_dict
+  name: gemnet_is2rs
   num_spherical: 7
-  num_radial: 128 #
+  num_radial: 128
   num_blocks: 4
-  emb_size_atom: 256 #
+  emb_size_atom: 256
   emb_size_edge: 512
   emb_size_trip_in: 64
   emb_size_trip_out: 64
@@ -42,15 +42,11 @@ model:
   extensive: True
   output_init: HeOrthogonal
   activation: silu
-  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
-#  regress_forces: True
   regress_forces: False
-#  direct_forces: True
   direct_forces: False
-  forces_coupled: True
-  update_v: True # 新增参数，是否预测坐标/向量
-  update_p: True
+  forces_coupled: False
+  otf_graph: True
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -59,30 +55,31 @@ model:
 
   num_atom_emb_layers: 2
   num_global_out_layers: 2
-  qint_tags: [0, 1]
-#  qint_tags: [1, 2]
+  qint_tags: [1, 2]
 
 optim:
-  batch_size: 32
-  eval_batch_size: 32
+  batch_size: 6 # 16
+  eval_batch_size: 6 # 16
   load_balancing: atoms
-  eval_every: 1000
+  eval_every: 5000
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
   optimizer_params: {"amsgrad": True}
-  scheduler: ReduceLROnPlateau
-  mode: min
-  factor: 0.8
-  patience: 3
-  max_epochs: 100
-  force_coefficient: 1
-  v_coefficient: 1
-  p_coefficient: 1
-  energy_coefficient: 1
+  warmup_steps: -1 # don't warm-up the learning rate
+  # warmup_factor: 0.2
+  lr_gamma: 0.8
+  # Following calculation is for an effective batch size of 16 x 16 GPUs = 256
+  # and a dataset size of 8225293 (1 epoch = 32130 steps).
+  # The older dataset had 6140155 points (1 epoch = 23984 steps).
+  lr_milestones: # steps at which lr_initial <- lr_initial * lr_gamma
+    - 64000 # ~2 epochs
+    - 96000 # ~3 epochs
+    - 128000 # ~4 epochs
+    - 160000 # ~5 epochs
+    - 192000 # ~6 epochs
+  max_epochs: 80
   ema_decay: 0.999
   clip_grad_norm: 10
-  loss_energy: mae
-  loss_force: l2mae
-  loss_vector: mae_v
-  weight_decay: 0
+  weight_decay: 0  # 2e-6 (TF weight decay) / 1e-4 (lr) = 2e-2
+  loss_positions: mae_v

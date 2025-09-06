@@ -43,6 +43,7 @@ model:
   output_init: HeOrthogonal
   activation: silu
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
+  otf_graph: True #
 
   regress_forces: False
 #  regress_forces: True
@@ -70,7 +71,7 @@ optim:
   batch_size: 32 # 每个卡的batch大小
   eval_batch_size: 32
   load_balancing: atoms
-  eval_every: 30
+  eval_every: 1000
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
@@ -79,13 +80,13 @@ optim:
   mode: min
   factor: 0.8
   patience: 3
-  max_epochs: 300
+  max_epochs: 100
+  ema_decay: 0.999
+  clip_grad_norm: 10
   force_coefficient: 1
   graph_coefficient: 1
   pos_coefficient: 1
-  energy_coefficient: 1
-  ema_decay: 0.999
-  clip_grad_norm: 10
+  energy_coefficient: 1 #
   loss_energy: mae
   loss_force: mae_v
   loss_vector: mae_v

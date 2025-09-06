@@ -1,12 +1,12 @@
 trainer: is2rse # trainer名字
 
 dataset:
-  - src: /data2/liud/dataset/Cu_single/1/tags/train
+  - src: /data2/liud/dataset/OC20/is2re100k/select_data/tags/100k/train
     normalize_labels: True # 标准化开关
     target_mean: -1.5260
     target_std: 2.2793
-  - src: /data2/liud/dataset/Cu_single/1/tags/val
-  - src: /data2/liud/dataset/Cu_single/1/tags/test
+  - src: /data2/liud/dataset/OC20/is2re100k/select_data/tags/100k/val
+#  - src: /data2/liud/dataset/cc/ads/eqv2
 
 
 logger: tensorboard

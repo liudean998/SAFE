@@ -54,7 +54,7 @@ class AtomEmbeddingTags(torch.nn.Module):
     """
 
 # 增加原子标签
-    def __init__(self, emb_size: int, num_elements: int, tags_size=128) -> None:
+    def __init__(self, emb_size: int, num_elements: int, tags_size=64) -> None:
         super().__init__()
         self.emb_size = emb_size
         self.tags_size = tags_size

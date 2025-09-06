@@ -42,11 +42,17 @@ class Evaluator:
             "energy_mae",
             "energy_force_within_threshold",
         ],
-        # "is2rs": [
-        #     "average_distance_within_threshold",
-        #     "positions_mae",
-        #     "positions_mse",
-        # ],
+        "is2rs": [
+            "average_distance_within_threshold",
+            "positions_mae",
+            "positions_mse",
+        ],
+        "is2rsv": [
+            "average_distance_within_threshold",
+            "positions_mae",
+            "positions_mse",
+            "v_mae",
+        ],
         "is2rve": [
             "v_mae",
             "v_mse",
@@ -95,6 +101,7 @@ class Evaluator:
     task_attributes = { # 检查输出有没有缺少某些属性
         "s2ef": ["energy", "forces", "natoms"],
         "is2rs": ["positions", "cell", "pbc", "natoms"],
+        "is2rsv": ["positions", "cell", "pbc", "natoms", "vector"],
         "is2rv": ["vector"], # 增加
         "is2rvd": ["vector","distance"], # 增加
         "is2rve": ["vector", "energy"], # 增加
@@ -107,7 +114,8 @@ class Evaluator:
     task_primary_metric = { # 主要评价函数，以此判断最佳值，保存结果
         # "s2ef": "energy_force_within_threshold",
         "s2ef": "energy_mae", # 修改
-        # "is2rs": "average_distance_within_threshold",
+        "is2rs": "average_distance_within_threshold",
+        "is2rsv": "average_distance_within_threshold",
         "is2rv": "v_mae", # 修改
         "is2rvd": "loss", # 修改
         "is2rve": "energy_mae", # 修改
@@ -118,13 +126,14 @@ class Evaluator:
     }
 
     def __init__(self, task: str) -> None:
-        assert task in ["s2ef", "is2rs", "is2re", 'is2rv', 'is2rvd', 'is2rve',
+        assert task in ["s2ef", "is2rs", "is2rsv", "is2re", 'is2rv', 'is2rvd', 'is2rve',
                         'is2rse','is2rse1', 'is2rfse'] # 增加
         self.task = task
         self.metric_fn = self.task_metrics[task]
 
     def eval(self, prediction, target, prev_metrics={}):
         for attr in self.task_attributes[self.task]:
+            # print(attr)
             assert attr in prediction
             assert attr in target
             assert prediction[attr].shape == target[attr].shape
@@ -227,21 +236,21 @@ def forces_magnitude(prediction, target):
 
 
 def positions_mae(prediction, target):
-    # if prediction["positions"].shape[0]:
-    #     return absolute_error(prediction["positions"], target["positions"])
-    # else:
-    #     return 0
     if prediction["positions"].shape[0]:
-        diff = torch.abs(prediction["positions"] - target["positions"])
-        diff = torch.sum(diff, dim=1)
-        diff = torch.sum(diff)
-        return {
-            "metric": torch.mean(diff),
-            "total": diff,
-            "numel": prediction["positions"].shape[0]
-        }
+        return absolute_error(prediction["positions"], target["positions"])
     else:
         return 0
+    # if prediction["positions"].shape[0]:
+    #     diff = torch.abs(prediction["positions"] - target["positions"])
+    #     diff = torch.sum(diff, dim=1)
+    #     diff = torch.sum(diff)
+    #     return {
+    #         "metric": torch.mean(diff),
+    #         "total": diff,
+    #         "numel": prediction["positions"].shape[0]
+    #     }
+    # else:
+    #     return 0
 
 def positions_mse(prediction, target):
     if prediction["positions"].shape[0]:
@@ -292,10 +301,10 @@ def energy_force_within_threshold(
     # compute absolute error on per-atom forces and energy per system.
     # then count the no. of systems where max force error is < 0.03 and max
     # energy error is < 0.02.
-    # f_thresh = 0.03
-    # e_thresh = 0.02
-    f_thresh = 0.05 # 修改 增大阈值
-    e_thresh = 0.05
+    f_thresh = 0.03
+    e_thresh = 0.02
+    # f_thresh = 0.05 # 修改 增大阈值
+    # e_thresh = 0.05
 
     success = 0
     total = int(target["natoms"].size(0))

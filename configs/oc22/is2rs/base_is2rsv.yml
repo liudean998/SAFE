@@ -1,4 +1,4 @@
-trainer: energy
+trainer: is2rsv
 
 dataset:
   train:
@@ -14,6 +14,8 @@ task:
   description: "Relaxed state energy prediction from initial structure."
   type: regression
   metric: mae
-  primary_metric: energy_mae
+  primary_metric: average_distance_within_threshold
   labels:
     - relaxed energy
+  train_on_free_atoms: False
+  eval_on_free_atoms: False

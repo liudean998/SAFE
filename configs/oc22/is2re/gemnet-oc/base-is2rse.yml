@@ -1,12 +1,12 @@
 trainer: is2rse
 
 dataset:
-  - src: /data2/liud/dataset/OC22/is2re/train/
+  - src: /data2/liud/dataset/OC22/ads/train/
     normalize_labels: False
     target_mean: -523.8716
     target_std: 228.1776
-  - src: /data2/liud/dataset/OC22/is2re/val/
-  - src: /data2/liud/dataset/OC22/is2re/test/
+  - src: /data2/liud/dataset/OC22/ads/val/
+  - src: /data2/liud/dataset/OC22/is2re/val_ood
 
 logger: tensorboard
 

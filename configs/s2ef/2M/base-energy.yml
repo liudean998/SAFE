@@ -1,15 +1,12 @@
 trainer: energy
 
 dataset:
-  - src: /data2/liud/dataset/Cu_single/1/train
-#    normalize_labels: False # 预测能量时，对能量进行标准化
-    normalize_labels: True # 预测能量时，对能量进行标准化
-    target_mean: -1.5188
-    target_std: 2.2821
-    grad_target_mean: 0.0
-    grad_target_std: 2.887317180633545
-  - src: /data2/liud/dataset/Cu_single/1/val
-  - src: /data2/liud/dataset/Cu_single/1/test
+  - src: /data2/liud/dataset/Cu_self/IS2RE/od_C2H2O2/tags/train
+    normalize_labels: True # 标准化开关
+    target_mean: -1.5260
+    target_std: 2.2793
+  - src: /data2/liud/dataset/Cu_self/IS2RE/od_C2H2O2/tags/val
+  - src: /data2/liud/dataset/Cu_self/IS2RE/od_C2H2O2/tags/test_od_C2H2O2
 
 
 logger: tensorboard

@@ -1,75 +1,56 @@
-# import torch
-# import time
-#
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#
-#
-# def compute_f_rmsd_torch(F_pred, F_ref):
-#     """
-#     使用 PyTorch 计算力的均方根偏差（F-RMSD）
-#
-#     参数:
-#     - F_pred: 形状为 (N, 3) 的 PyTorch 张量，预测力
-#     - F_ref: 形状为 (N, 3) 的 PyTorch 张量，参考力（真实力）
-#
-#     返回:
-#     - F-RMSD 值
-#     """
-#     diff = F_pred - F_ref
-#     rmsd = torch.sqrt(torch.mean(torch.sum(diff ** 2, dim=1)))
-#     return rmsd.item()
-#
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# F_pred = torch.randn(200000, 3, device=device)  # 100万原子的预测力
-# F_ref = torch.randn(200000, 3, device=device)   # 100万原子的参考力
-#
-# a = time.time()
-# f_rmsd = compute_f_rmsd_torch(F_pred, F_ref)
-# print(f"F-RMSD: {f_rmsd:.6f}")
-# b = time.time()
-# print(b - a)
-#
-# import numpy as np
-# def compute_rmsd(positions1, positions2):
-#     diff = positions1 - positions2
-#     return np.sqrt(np.mean(np.sum(diff**2, axis=1)))
-#
-# positions1 = np.random.randn(200000, 3)
-# positions2 = np.random.randn(200000, 3)
-# c = time.time()
-# p_rmsd = compute_rmsd(positions1, positions2)
-# print(f"RMSD: {p_rmsd:}")
-# print(time.time() - c)
+import torch
+import lmdb
+import pickle
+import inspect
+import torch.nn as nn
+from torch.utils.data import Dataset
+from torch_geometric.loader import DataLoader
+from ocpmodels.models.gemnet_oc.gemnet_oc_is2rse import GemNetOCRSE
+
+checkpoint_path = '/home/wuyinkai/liud/ocp/checkpoints/2025-05/2025-05-30-19-07-44/best_checkpoint.pt'
+test_dataset_path = '/data2/liud/dataset/Cu_self/IS2RE/od_C2H2O2/tags/test/data.lmdb'
+
+check =torch.load(checkpoint_path, map_location=torch.device("cpu"))
+model = GemNetOCRSE(**check['config']['model_attributes'], num_atoms=1, bond_feat_dim=1, num_targets=1)
+device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+model = nn.DataParallel(model)
+model.load_state_dict(check['state_dict'])
+model.eval()
+
+# 输入数据进行预测
+class LMDBDataset(Dataset):
+    def __init__(self, lmdb_path):
+        self.env = lmdb.open(
+            lmdb_path,
+            subdir=False,
+            readonly=True,
+            lock=False,
+            readahead=False,
+            meminit=False
+        )
+        with self.env.begin(write=False) as txn:
+            # LMDB 里有多少条数据
+            self.length = txn.stat()["entries"]
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        with self.env.begin(write=False) as txn:
+            byteflow = txn.get(str(idx).encode("ascii"))
+            if byteflow is None:
+                raise IndexError(f"Index {idx} not found in LMDB.")
+            data = pickle.loads(byteflow)
+        return data
 
 
-# import sqlite3
-#
-# conn = sqlite3.connect('/home/wuyinkai/yxy/gem/result/gemnet_all.db')
-# cursor = conn.cursor()
-#
-# # 查看有哪些表
-# cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-# print(cursor.fetchall())
-#
-# # 查看前几条数据
-# cursor.execute("SELECT * FROM systems LIMIT 5")
-# for row in cursor.fetchall():
-#     print(row)
-#
-# conn.close()
+dataset = LMDBDataset(test_dataset_path)
 
+dataloader = DataLoader(dataset, batch_size=2, num_workers=2)
 
-from ase.db import connect
-
-# 连接 ASE 数据库
-db = connect('/home/wuyinkai/yxy/gem/result/gemnet_all.db')
-
-print(f"数据库中共有 {len(db)} 条记录")
-i = 1
-while True:
-    try:
-        row = db.get(i)  # 逐行尝试
-        print(f"id={row.id}, formula={row.formula}")
-        i += 1
-    except IndexError:
-        break  # 到末尾
+for batch in dataloader:
+    batch = batch.to(device)
+    out_e, out_v, out_p, out_f, main_graph  = model(batch)
+    print(out_e)
+    break

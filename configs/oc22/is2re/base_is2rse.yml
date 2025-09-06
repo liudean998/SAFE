@@ -1,4 +1,4 @@
-trainer: energy
+trainer: is2rse
 
 dataset:
   train:

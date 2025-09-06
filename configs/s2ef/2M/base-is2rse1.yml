@@ -1,12 +1,12 @@
-trainer: is2rse # trainer名字
+trainer: is2rse_abs # trainer名字
 
 dataset:
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/train
-    normalize_labels: False # 标准化开关
-#    target_mean: -1.5260
-#    target_std: 2.2793
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/val
-  - src: /home/wuyinkai/liud/dataset/OC20/is2re100k/select_data/tags/100k/test
+  - src: /data2/liud/dataset/OC20/is2re100k/origin/ac/train
+    normalize_labels: True # 标准化开关
+    target_mean: -1.5260
+    target_std: 2.2793
+  - src: /data2/liud/dataset/OC20/is2re100k/origin/ac/val
+#  - src: /data2/liud/dataset/OC20/is2re/tags12/select/val
 
 
 logger: tensorboard

@@ -490,7 +490,8 @@ class BaseTrainer(ABC):
             "energy": self.config["optim"].get("loss_energy", "mae"),
             "force": self.config["optim"].get("loss_force", "mae"),
             "vector": self.config["optim"].get("loss_vector", "mae"),
-            'distance': self.config['optim'].get('loss_distance', 'mae')
+            'distance': self.config['optim'].get('loss_distance', 'mae'),
+            'positions': self.config['optim'].get('loss_positions', 'mae')
         }
 
         for loss, loss_name in self.loss_fn.items():
