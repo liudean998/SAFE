@@ -321,14 +321,14 @@ class GemNetOCRSE(GemNetOC):
     ):
         # ------------使用单位化的Vetor和distance做rbf嵌入
         self.radial_basis = RadialBasisVec(
-            num_radial=int(num_radial / 4),
+            num_radial=int(num_radial),
             cutoff=self.cutoff,
             rbf=rbf,
             envelope=envelope,
             scale_basis=scale_basis,
         )  # 修改
         radial_basis_spherical = RadialBasisVec(
-            num_radial=int(num_radial / 4),
+            num_radial=int(num_radial),
             cutoff=self.cutoff,
             rbf=rbf_spherical,
             envelope=envelope,
@@ -336,7 +336,7 @@ class GemNetOCRSE(GemNetOC):
         )
         if self.quad_interaction:
             radial_basis_spherical_qint = RadialBasisVec(
-                num_radial=int(num_radial / 4),
+                num_radial=int(num_radial),
                 cutoff=self.cutoff_qint,
                 rbf=rbf_spherical,
                 envelope=envelope,
@@ -357,7 +357,7 @@ class GemNetOCRSE(GemNetOC):
             )
         if self.atom_edge_interaction:
             self.radial_basis_aeaint = RadialBasisVec(
-                num_radial=int(num_radial / 4),
+                num_radial=int(num_radial),
                 cutoff=self.cutoff_aeaint,
                 rbf=rbf,
                 envelope=envelope,
@@ -371,14 +371,14 @@ class GemNetOCRSE(GemNetOC):
             )
         if self.edge_atom_interaction:
             self.radial_basis_aeaint = RadialBasisVec(
-                num_radial=int(num_radial / 4),
+                num_radial=int(num_radial),
                 cutoff=self.cutoff_aeaint,
                 rbf=rbf,
                 envelope=envelope,
                 scale_basis=scale_basis,
             )
             radial_basis_spherical_aeaint = RadialBasisVec(
-                num_radial=int(num_radial / 4),
+                num_radial=int(num_radial),
                 cutoff=self.cutoff_aeaint,
                 rbf=rbf_spherical,
                 envelope=envelope,
@@ -392,7 +392,7 @@ class GemNetOCRSE(GemNetOC):
             )
         if self.atom_interaction:
             self.radial_basis_aint = RadialBasisVec(
-                num_radial=int(num_radial / 4),
+                num_radial=int(num_radial),
                 cutoff=self.cutoff_aint,
                 rbf=rbf,
                 envelope=envelope,

@@ -4,7 +4,7 @@ includes:
 model:
   name: gemnet_is2rse
   num_spherical: 7
-  num_radial: 128 #
+  num_radial: 129 #
   num_blocks: 4
   emb_size_atom: 256 #
   emb_size_edge: 512
