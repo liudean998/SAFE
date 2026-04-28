@@ -295,13 +295,7 @@ class OutputBlockStru(AtomUpdateBlock):
                 x_E = layer(x_E)  # (nAtoms, emb_size_atom)
         # -----------------------向量 自添加------------------------------ #
         if self.update_v:
-            # x_V = m.clone()
-            # for _, layer in enumerate(self.seq_vec):
-            #     # x_V = layer(x_V)
-            #     x_V = layer(x) # 共享1
-            x_V = x # 共享2
-            # basis_emb_V = self.dense_rbf_V(basis_rad.clone())
-            # x_V = x_V * basis_emb_E # (nEdges, emb_size_edge)
+            x_V = x
         else:
             x_V = None
         return x_E, x_V

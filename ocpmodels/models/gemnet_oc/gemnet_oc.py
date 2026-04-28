@@ -281,16 +281,16 @@ class GemNetOC(BaseModel):
         self.regress_forces = regress_forces
         self.force_scaler = ForceScaler(enabled=scale_backprop_forces)
 
-        self.init_basis_functions(
-            num_radial,
-            num_spherical,
-            rbf,
-            rbf_spherical,
-            envelope,
-            cbf,
-            sbf,
-            scale_basis,
-        )
+        # self.init_basis_functions(
+        #     num_radial,
+        #     num_spherical,
+        #     rbf,
+        #     rbf_spherical,
+        #     envelope,
+        #     cbf,
+        #     sbf,
+        #     scale_basis,
+        # )
         self.init_shared_basis_layers(
             num_radial, num_spherical, emb_size_rbf, emb_size_cbf, emb_size_sbf
         )

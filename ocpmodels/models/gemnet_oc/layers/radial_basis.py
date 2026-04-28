@@ -290,10 +290,12 @@ class RadialBasisVec(torch.nn.Module):
             "exponent": 5,
         },
         scale_basis: bool = False,
+        num_radial_v: int = 32
     ) -> None:
         super().__init__()
+        # print(num_radial_v, 'oooooo')
         num_radial_all = num_radial
-        num_radial_v = 42
+        # num_radial_v = 32
         num_radial_d = num_radial_all - 3*num_radial_v
         self.inv_cutoff = 1 / cutoff
 
@@ -336,39 +338,6 @@ class RadialBasisVec(torch.nn.Module):
             raise ValueError(f"Unknown radial basis function '{rbf_name}'.")
 
     def forward(self, d: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        ####### only v #############
-        # v = v.view(-1)
-        # v_scaled = v*self.inv_cutoff
-        # env = self.envelope(v_scaled)
-        # res = env[:, None] * self.rbf(v_scaled)
-        # if self.scale_basis:
-        #     res = self.scale_rbf(res)
-        # res = reshape_vector3(res)
-        # return res
-        ######## only d #############
-        # d_scaled = d * self.inv_cutoff
-        #
-        # env = self.envelope(d_scaled)
-        # res = env[:, None] * self.rbf(d_scaled)
-        #
-        # if self.scale_basis:
-        #     res = self.scale_rbf(res)
-        #
-        # return res
-
-        ########## v+d #############
-        # v_d = torch.cat((v, d.unsqueeze(1)), dim=1)
-        # v_d = v_d.view(-1)
-        # v_d_scaled = v_d * self.inv_cutoff
-        # env = self.envelope(v_d_scaled)
-        # res = env[:, None] * self.rbf(v_d_scaled)
-        # if self.scale_basis:
-        #     res = self.scale_rbf(res)
-        # res = reshape_vector(res)
-        # return res
-        # (num_edges, num_radial) or (num_edges, num_orders * num_radial)
-
-        # ####### v固定20长度，d为剩余长度  #####
         d_scaled = d * self.inv_cutoff
 
         env = self.envelope(d_scaled)
@@ -401,81 +370,3 @@ def reshape_vector3(vector):
                              size[1]*3)
     return vector
 
-class RadialBasisVecDirct(torch.nn.Module):
-    """
-
-    Arguments
-    ---------
-    num_radial: int
-        Number of basis functions. Controls the maximum frequency.
-    cutoff: float
-        Cutoff distance in Angstrom.
-    rbf: dict = {"name": "gaussian"}
-        Basis function and its hyperparameters.
-    envelope: dict = {"name": "polynomial", "exponent": 5}
-        Envelope function and its hyperparameters.
-    scale_basis: bool
-        Whether to scale the basis values for better numerical stability.
-    """
-
-    def __init__(
-        self,
-        num_radial: int,
-        cutoff: float,
-        rbf: Dict[str, str] = {"name": "gaussian"},
-        envelope: Dict[str, Union[str, int]] = {
-            "name": "polynomial",
-            "exponent": 5,
-        },
-        scale_basis: bool = False,
-    ) -> None:
-        super().__init__()
-        self.inv_cutoff = 1 / cutoff
-
-        self.scale_basis = scale_basis
-        if self.scale_basis:
-            self.scale_rbf = ScaleFactor()
-
-        env_name = assert_is_instance(envelope["name"], str).lower()
-        env_hparams = envelope.copy()
-        del env_hparams["name"]
-
-        if env_name == "polynomial":
-            self.envelope = PolynomialEnvelope(**env_hparams)
-        elif env_name == "exponential":
-            self.envelope = ExponentialEnvelope(**env_hparams)
-        else:
-            raise ValueError(f"Unknown envelope function '{env_name}'.")
-
-        self.rbf_v = GaussianBasis(start=0, stop=1, num_gaussians=32)
-        self.env_v = TanhEnvelope()
-        # num_radial = num_radial - 60
-        rbf_name = rbf["name"].lower()
-        rbf_hparams = rbf.copy()
-        del rbf_hparams["name"]
-        # RBFs get distances scaled to be in [0, 1]
-        if rbf_name == "gaussian":
-            self.rbf = GaussianBasis(
-                start=0, stop=1, num_gaussians=num_radial, **rbf_hparams
-            )
-        elif rbf_name == "spherical_bessel":
-            self.rbf = SphericalBesselBasis(
-                num_radial=num_radial, cutoff=cutoff, **rbf_hparams
-            )
-        elif rbf_name == "bernstein":
-            self.rbf = BernsteinBasis(num_radial=num_radial, **rbf_hparams)
-        else:
-            raise ValueError(f"Unknown radial basis function '{rbf_name}'.")
-
-    def forward(self, d: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        v = v*0.25+0.25
-        d = d*self.inv_cutoff
-        v_d = torch.cat((v, d.unsqueeze(1)), dim=1)
-        v_d = v_d.view(-1)
-        env = self.envelope(v_d)
-        vd_rbf = self.rbf(v_d)
-        res = env[:, None] * vd_rbf
-        if self.scale_basis:
-            res = self.scale_rbf(res)
-        res = reshape_vector(res)
-        return res
