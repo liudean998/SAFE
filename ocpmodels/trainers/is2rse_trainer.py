@@ -993,12 +993,6 @@ class Is2RseTrainer(BaseTrainer):
                 # Evaluate on val set every `eval_every` iterations.
                 if self.step % eval_every == 0:
                     total_norm = 0
-                    # for name, param in self.model.named_parameters():
-                    #     if param.grad is not None:
-                    #         grad_norm = param.grad.data.norm(2).item()
-                    #         print(f'{name}: grad norm = {grad_norm:.6f}')
-                    #         total_norm += grad_norm
-                    # print(f'Total grad norm = {total_norm:.6f}')
                     if self.val_loader is not None:
                         val_metrics = self.validate(
                             split="val",
@@ -1044,10 +1038,7 @@ class Is2RseTrainer(BaseTrainer):
             self.test_dataset.close_db()
 
     def _forward(self, batch_list):
-        # forward pass.
-        # out = self.model(batch_list)
         out_e, out_v, out_p, out_f, main_graph = self.model(batch_list)
-        # print(out_v)
         out = {
             'energy': out_e,
             "vector": out_v if out_v is not None else torch.tensor([]),
@@ -1073,11 +1064,7 @@ class Is2RseTrainer(BaseTrainer):
                 main_graph['num_neighbors'],
                 return_distance_vec=True
             )
-            # self.v_target = -relax_graph['distance_vec'][edge_mask] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
-            self.v_target = torch.abs(relax_graph['distance_vec']) # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
-            # print(self.v_target)
-            # import time
-            # time.sleep(1000)
+            self.v_target = torch.abs(relax_graph['distance_vec'])
         return out
 
     def _compute_loss(self, out, batch_list) -> int:

@@ -308,7 +308,6 @@ class EnergyTrainer(BaseTrainer):
 
     def _forward(self, batch_list):
         output = self.model(batch_list)
-        # print(output)
         if output.shape[-1] == 1:
             output = output.view(-1)
 

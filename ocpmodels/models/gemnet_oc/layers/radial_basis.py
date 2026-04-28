@@ -293,9 +293,7 @@ class RadialBasisVec(torch.nn.Module):
         num_radial_v: int = 32
     ) -> None:
         super().__init__()
-        # print(num_radial_v, 'oooooo')
         num_radial_all = num_radial
-        # num_radial_v = 32
         num_radial_d = num_radial_all - 3*num_radial_v
         self.inv_cutoff = 1 / cutoff
 
@@ -320,9 +318,6 @@ class RadialBasisVec(torch.nn.Module):
 
         # RBFs get distances scaled to be in [0, 1]
         if rbf_name == "gaussian":
-            # self.rbf = GaussianBasis(
-            #     start=0, stop=1, num_gaussians=num_radial, **rbf_hparams
-            # )
             self.rbf = GaussianBasis(
                 start=0, stop=1, num_gaussians=num_radial_d, **rbf_hparams
             )
@@ -341,16 +336,12 @@ class RadialBasisVec(torch.nn.Module):
         d_scaled = d * self.inv_cutoff
 
         env = self.envelope(d_scaled)
-        # print(env.size())
         res = env[:, None] * self.rbf(d_scaled)
-        # print(res.size())
         if self.scale_basis:
             res = self.scale_rbf(res)
         v = v.view(-1)
-        # print(v.size())
         v_scaled = v * self.inv_cutoff
         env_v = self.envelope(v_scaled)
-        # print(env_v.size())
         res_v = env_v[:, None]*self.rbf_v(v_scaled)
         res_v = reshape_vector3(res_v)
         res_vd  = torch.cat((res_v, res), dim=1)
@@ -365,7 +356,6 @@ def reshape_vector(vector):
 
 def reshape_vector3(vector):
     size = vector.shape
-    # print(size)
     vector = vector.view(int(size[0]/3),
                              size[1]*3)
     return vector
