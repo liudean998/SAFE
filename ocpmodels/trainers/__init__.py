@@ -9,10 +9,12 @@ __all__ = [
     "EnergyTrainer",
     'Is2RvTrainer',
     'Is2RveTrainer',
-    'Is2RvDTrainer'
+    'Is2RvDTrainer',
+    'Is2RseTrainer'
 ]
 
 from .base_trainer import BaseTrainer
 from .energy_trainer import EnergyTrainer
 from .forces_trainer import ForcesTrainer
 from .is2rv_trainer import  Is2RvTrainer, Is2RveTrainer, Is2RvDTrainer
+from .is2rse_trainer import Is2RseTrainer

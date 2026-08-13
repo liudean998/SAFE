@@ -144,7 +144,12 @@ class Is2RseTrainer(BaseTrainer):
                 self.normalizers["target"].to(self.device)
 
         # predictions = {"id": [], "energy": [], "vector":[]}
-        predictions = {"id": [], "energy": []}
+        predictions = {"id": [], "energy": [],
+                       "pos_target": [], "pos_pre": [],
+                       "edge_target": [], "edge_pre":[]}
+        # batch_time = []
+        num_stru  =0
+        # start_total = time.perf_counter()
         for i, batch_list in tqdm(
             enumerate(data_loader),
             total=len(data_loader),
@@ -152,8 +157,12 @@ class Is2RseTrainer(BaseTrainer):
             desc="device {}".format(rank),
             disable=disable_tqdm,
         ):
+            # start_batch = time.perf_counter()
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 out = self._forward(batch_list)
+                # print(out)
+                # import time
+                # time.sleep(1000)
             if self.normalizers is not None :
                 if "target" in self.normalizers:
                     out["energy"] = self.normalizers["target"].denorm(
@@ -178,15 +187,51 @@ class Is2RseTrainer(BaseTrainer):
                     predictions["id"].extend(
                         [str(i) for i in batch_list[0].sid.tolist()]
                     )
+            # end_batch = time.perf_counter()
+            # batch_time.append(end_batch - start_batch)
+            num_stru += len(batch_list[0].y)
+            # if out['positions'].shape[0]:
+            #     # tags = batch_list[0].tags
+            #     # atom_mask = tags != 0
+            #     pos_target = torch.cat([batch.pos_relaxed.to(self.device) for batch in batch_list])
+            #     pos_origin = torch.cat([batch.pos.to(self.device) for batch in batch_list])
+            #     pos_pre = out['positions'] + pos_origin
+            #     predictions['pos_target'].extend(pos_target.cpu().detach())
+            #     # predictions['pos_pre'].extend(pos_pre.cpu().detach())
+            #     predictions['pos_pre'].extend(pos_origin.cpu().detach())
+            # if out['vector'].shape[0]:
+            #     # v_target = self.v_target
+            #     predictions["edge_target"].extend(self.v_target.cpu().detach())
+            #     # predictions["edge_pre"].extend(out["vector"].cpu().detach())
+            #     predictions["edge_pre"].extend(self.v_origin.cpu().detach())
 
         # predictions["id"] = np.array(
         #     predictions["id"],
         # )
+
+        # torch.cuda.synchronize()
+        # end_total = time.perf_counter()
+        # total_time = end_total - start_total
+        # mean_batch_time = sum(batch_time)/len(batch_time)
+        # throughput = num_stru/total_time
+        #
+        # peak_all = torch.cuda.max_memory_cached()/1024**3
+        # peak_res = torch.cuda.max_memory_reserved() / 1024**3
+        # print('peak_all', peak_all)
+        # print('peak_res', peak_res)
+        # print('mean_batch time', mean_batch_time*1000, 'ms')
+        # print('th', throughput)
+        # print('tital time', total_time)
+        #
+        # time.sleep(10000)
         self.save_results(
-            predictions, results_file, keys=["energy"]
+            predictions, results_file, keys=["energy", "pos_target", "pos_pre",
+                                             "edge_target", "edge_pre"]
         )
         if self.ema:
             self.ema.restore()
+
+
 
         return predictions
 
@@ -274,7 +319,7 @@ class Is2RseTrainer(BaseTrainer):
                     out,
                     batch,
                     self.evaluator,
-                    self.metrics,
+                    metrics={},
                 )
                 self.metrics = self.evaluator.update(
                     "loss", loss.item() / scale, self.metrics
@@ -389,16 +434,29 @@ class Is2RseTrainer(BaseTrainer):
         # out['vector'] = out['vector'][edge_mask]
         # out['positions'] = out['positions'][atom_mask]
         if hasattr(batch, "pos_relaxed"):
-            relax_graph = get_pbc_distances(
-                batch.pos_relaxed,
-                main_graph['edge_index'],
-                batch.cell,
-                -main_graph['cell_offset'],
-                main_graph['num_neighbors'],
-                return_distance_vec=True
-            )
-            # self.v_target = -relax_graph['distance_vec'][edge_mask] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
-            self.v_target = -relax_graph['distance_vec'] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
+            if 'target_vec' in main_graph:
+                self.v_target = main_graph['target_vec']
+                self.v_origin = main_graph['origin_vec']
+            else:
+                relax_graph = get_pbc_distances(
+                    batch.pos_relaxed,
+                    main_graph['edge_index'],
+                    batch.cell,
+                    -main_graph['cell_offset'],
+                    main_graph['num_neighbors'],
+                    return_distance_vec=True
+                )
+                # origin_graph = get_pbc_distances(
+                #     batch.pos,
+                #     main_graph['edge_index'],
+                #     batch.cell,
+                #     -main_graph['cell_offset'],
+                #     main_graph['num_neighbors'],
+                #     return_distance_vec=True
+                # )
+                # self.v_target = -relax_graph['distance_vec'][edge_mask] # 因为main_graph(gemnetoc)在嵌入前对Vector取了反向，所以这里再次取反
+                self.v_target = relax_graph['distances']
+                self.v_origin = main_graph['distance']
         return out
 
     def _compute_loss(self, out, batch_list) -> int:
@@ -433,7 +491,8 @@ class Is2RseTrainer(BaseTrainer):
             p_mult = self.config["optim"].get("pos_coefficient", 1)
             # p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin[atom_mask],
             #                                        pos_target[atom_mask])
-            p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin,
+            # print(out["positions"].shape, pos_origin.shape, pos_target.shape)
+            p_loss = p_mult*self.loss_fn['positions'](out['positions']+pos_origin,
                                                    pos_target)
         else:
             p_loss = None
@@ -701,7 +760,7 @@ class Is2RseTrainer(BaseTrainer):
         registry.unregister("set_deterministic_scatter")
 
 @registry.register_trainer("is2rse_abs")
-class Is2RseTrainer(BaseTrainer):
+class Is2RseTrainerabs(BaseTrainer):
     """
     Trainer class for the Structure to Energy & Force (S2EF) and Initial State to
     Relaxed State (IS2RS) tasks.
@@ -949,7 +1008,7 @@ class Is2RseTrainer(BaseTrainer):
                     out,
                     batch,
                     self.evaluator,
-                    self.metrics,
+                    {},
                 )
                 self.metrics = self.evaluator.update(
                     "loss", loss.item() / scale, self.metrics
@@ -993,6 +1052,12 @@ class Is2RseTrainer(BaseTrainer):
                 # Evaluate on val set every `eval_every` iterations.
                 if self.step % eval_every == 0:
                     total_norm = 0
+                    # for name, param in self.model.named_parameters():
+                    #     if param.grad is not None:
+                    #         grad_norm = param.grad.data.norm(2).item()
+                    #         print(f'{name}: grad norm = {grad_norm:.6f}')
+                    #         total_norm += grad_norm
+                    # print(f'Total grad norm = {total_norm:.6f}')
                     if self.val_loader is not None:
                         val_metrics = self.validate(
                             split="val",
@@ -1038,7 +1103,10 @@ class Is2RseTrainer(BaseTrainer):
             self.test_dataset.close_db()
 
     def _forward(self, batch_list):
+        # forward pass.
+        # out = self.model(batch_list)
         out_e, out_v, out_p, out_f, main_graph = self.model(batch_list)
+        # print(out_v)
         out = {
             'energy': out_e,
             "vector": out_v if out_v is not None else torch.tensor([]),
@@ -1064,7 +1132,11 @@ class Is2RseTrainer(BaseTrainer):
                 main_graph['num_neighbors'],
                 return_distance_vec=True
             )
-            self.v_target = torch.abs(relax_graph['distance_vec'])
+            # self.v_target = -relax_graph['distance_vec'][edge_mask] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
+            self.v_target = torch.abs(relax_graph['distances']) # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
+            # print(self.v_target)
+            # import time
+            # time.sleep(1000)
         return out
 
     def _compute_loss(self, out, batch_list) -> int:
@@ -1099,7 +1171,7 @@ class Is2RseTrainer(BaseTrainer):
             p_mult = self.config["optim"].get("pos_coefficient", 1)
             # p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin[atom_mask],
             #                                        pos_target[atom_mask])
-            p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin,
+            p_loss = p_mult*self.loss_fn['positions'](out['positions']+pos_origin,
                                                    pos_target)
         else:
             p_loss = None

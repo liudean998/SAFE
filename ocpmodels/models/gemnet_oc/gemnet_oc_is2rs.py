@@ -204,7 +204,7 @@ class GemNetOCRS(GemNetOC):
         out_blocks = []
         for _ in range(num_blocks + 1):
             out_blocks.append(
-                OutputBlock(
+                OutputBlockStru(
                     emb_size_atom=emb_size_atom,
                     emb_size_edge=emb_size_edge,
                     emb_size_rbf=emb_size_rbf,
@@ -212,6 +212,8 @@ class GemNetOCRS(GemNetOC):
                     nHidden_afteratom=num_output_afteratom,
                     activation=activation,
                     direct_forces=direct_forces,
+                    update_p=True,
+                    update_v=update_v
                 )
             )
         self.out_blocks = torch.nn.ModuleList(out_blocks)
@@ -232,7 +234,7 @@ class GemNetOCRS(GemNetOC):
                         ]
             self.out_mlp_V = torch.nn.Sequential(*out_mlp_V)
             self.out_v = Dense(
-                emb_size_edge, 3, bias=False, activation=None
+                emb_size_edge, 1, bias=False, activation=None
             )
         out_mlp_P = [
                         Dense(
@@ -403,10 +405,11 @@ class GemNetOCRS(GemNetOC):
         m = self.edge_emb(h, basis_rad_raw, main_graph["edge_index"])
 
         # (nEdges, emb_size_edge)
-        x_E, x_F = self.out_blocks[0](h, m, basis_output, idx_t)
+        x_R, x_D = self.out_blocks[0](h, m, basis_output, idx_t)
+        # print(x_D, '???')
         # (nEdges, emb_size_edge)
-        xs_E = [x_E]
-
+        xs_R = [x_R]
+        xs_D = [x_D]
         for i in range(self.num_blocks):
             # Interaction block
             h, m = self.int_blocks[i](
@@ -428,14 +431,22 @@ class GemNetOCRS(GemNetOC):
                 quad_idx=quad_idx,
             )  # (nAtoms, emb_size_atom), (nEdges, emb_size_edge)
 
-            x_E, x_V = self.out_blocks[i + 1](h, m, basis_output, idx_t)
-            xs_E.append(x_E)
+            x_R, x_D = self.out_blocks[i + 1](h, m, basis_output, idx_t)
+            xs_R.append(x_R)
+            xs_D.append(x_D)
         # 坐标
-        x_P = self.out_mlp_P(torch.cat(xs_E, dim=-1))
-        P_t = self.out_p(x_P)
-        P_t = P_t.squeeze(1)
+        x_R = self.out_mlp_P(torch.cat(xs_R, dim=-1))
+        R_t = self.out_p(x_R)
+        R_t = R_t.squeeze(1)
 
-        return P_t, main_graph
+        if self.update_v:
+            x_D = self.out_mlp_V(torch.cat(xs_D, dim=-1))
+            D_t = self.out_v(x_D)
+            D_t = D_t.squeeze(1)
+        else:
+            D_t = None
+        # print(D_t)
+        return R_t, D_t, main_graph
 
 
 @registry.register_model("gemnet_is2rsv")

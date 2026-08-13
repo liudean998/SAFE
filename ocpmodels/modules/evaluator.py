@@ -264,15 +264,18 @@ def v_mae(prediction, target):
     #     return absolute_error(prediction["vector"], target["vector"])
     # else:
     #     return 0
+    # print(prediction, target)
     if prediction['vector'].shape[0]:
         diff = torch.abs(prediction["vector"] - target["vector"])
-        diff = torch.sum(diff, dim=1)
-        diff = torch.sum(diff)
+        # diff = torch.sum(diff, dim=0)
+        # diff = torch.sum(diff)
+        # print(torch.mean(diff),diff)
         return {
             "metric": torch.mean(diff),
-            "total": diff,
+            "total": torch.sum(diff),
             "numel": prediction["vector"].shape[0]
         }
+
     else:
         return 0
 

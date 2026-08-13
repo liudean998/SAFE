@@ -16,6 +16,7 @@ from ocpmodels.common import distutils
 from ocpmodels.common.registry import registry
 from ocpmodels.modules.scaling.util import ensure_fitted
 from ocpmodels.trainers.base_trainer import BaseTrainer
+import time
 
 
 @registry.register_trainer("energy")
@@ -134,8 +135,11 @@ class EnergyTrainer(BaseTrainer):
 
         if self.normalizers is not None and "target" in self.normalizers:
             self.normalizers["target"].to(self.device)
-        predictions = {"id": [], "energy": []}
 
+        predictions = {"id": [], "energy": []}
+        batch_time = []
+        num_stru = 0
+        start_total = time.perf_counter()
         for _, batch in tqdm(
             enumerate(loader),
             total=len(loader),
@@ -143,6 +147,7 @@ class EnergyTrainer(BaseTrainer):
             desc="device {}".format(rank),
             disable=disable_tqdm,
         ):
+            start_batch = time.perf_counter()
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 out = self._forward(batch)
 
@@ -166,7 +171,24 @@ class EnergyTrainer(BaseTrainer):
             else:
                 predictions["energy"] = out["energy"].detach()
                 return predictions
+            end_batch = time.perf_counter()
+            batch_time.append(end_batch - start_batch)
+            num_stru += len(batch[0].y)
+        torch.cuda.synchronize()
+        end_total = time.perf_counter()
+        total_time = end_total - start_total
+        mean_batch_time = sum(batch_time)/len(batch_time)
+        throughput = num_stru/total_time
 
+        peak_all = torch.cuda.max_memory_cached()/1024**3
+        peak_res = torch.cuda.max_memory_reserved() / 1024**3
+        print('peak_all', peak_all)
+        print('peak_res', peak_res)
+        print('mean_batch time', mean_batch_time*1000, 'ms')
+        print('th', throughput)
+        print('tital time', total_time)
+
+        time.sleep(10000)
         self.save_results(predictions, results_file, keys=["energy"])
 
         if self.ema:
@@ -308,6 +330,7 @@ class EnergyTrainer(BaseTrainer):
 
     def _forward(self, batch_list):
         output = self.model(batch_list)
+        # print(output)
         if output.shape[-1] == 1:
             output = output.view(-1)
 

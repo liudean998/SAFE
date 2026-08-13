@@ -1,14 +1,14 @@
 trainer: energy
 
 dataset:
-  - src: /tmp/origin/train
+  - src: /dataset/train
     normalize_labels: True # 预测能量时，对能量进行标准化
     target_mean: -1.5260
     target_std: 2.2793
 #    grad_target_mean: 0.0
 #    grad_target_std: 2.887317180633545
-  - src: /tmp/origin/val
-  - src: /tmp/origin/test
+  - src: /dataset/val
+  - src: /dataset/test
 
 
 logger: tensorboard

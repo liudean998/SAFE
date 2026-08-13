@@ -1,8 +1,8 @@
 includes:
-  - configs/shug/oc22/base.yml
+  - configs/SAFE/OC20/base-is2rse.yml
 
 model:
-  name: gemnet_oc
+  name: gemnet_is2rse
   num_spherical: 7
   num_radial: 128
   num_blocks: 4
@@ -42,13 +42,15 @@ model:
   extensive: True
   output_init: HeOrthogonal
   activation: silu
-  otf_graph: True
   scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
 
 #  regress_forces: True
   regress_forces: False
+#  direct_forces: True
   direct_forces: False
-  forces_coupled: False
+  forces_coupled: True
+  update_v: True
+  update_p: True
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -57,13 +59,14 @@ model:
 
   num_atom_emb_layers: 2
   num_global_out_layers: 2
+#  qint_tags: [0, 1]
   qint_tags: [1, 2]
 
 optim:
-  batch_size: 16
-  eval_batch_size: 16
+  batch_size: 128 #
+  eval_batch_size: 200 #
   load_balancing: atoms
-  eval_every: 5000
+  eval_every: 2000 #
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
@@ -72,11 +75,14 @@ optim:
   mode: min
   factor: 0.8
   patience: 3
-  max_epochs: 80
-  force_coefficient: 100
+  max_epochs: 100
+  force_coefficient: 1
+  graph_coefficient: 1
+  pos_coefficient: 1
   energy_coefficient: 1
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
-  loss_force: l2mae
+  loss_force: mae_v
+  loss_vector: mae_v
   weight_decay: 0

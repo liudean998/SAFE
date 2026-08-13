@@ -540,6 +540,13 @@ class Is2RvTrainer(BaseTrainer):
                             )
                         )
                 else:
+                    # 目前使用
+                    # weight = batch_list[0].edge_tags[out['mask']]
+                    # weight[weight==4] = 100
+                    # weight[weight==6] = 50
+                    # weight[weight==8] = 10
+                    # weight[weight==0] = 1
+                    # print(weight)
                     loss.append(
                             pos_mult
                             * self.loss_fn["vector"](out['vector'],

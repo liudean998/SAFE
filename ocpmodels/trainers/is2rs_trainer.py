@@ -545,7 +545,9 @@ class Is2RsTrainer(BaseTrainer):
         ):
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 out = self._forward(batch_list)
+            # pos_target = torch.cat([batch.pos_relaxed.to(self.device) for batch in batch_list])
             predictions['positions'].extend(out['positions'].cpu().detach())
+            # predictions['positions_origin'].extend(pos_target.cpu().detach())
             if per_image:
                 if isinstance(batch_list[0].sid, list):
                     predictions["id"].extend(
@@ -746,7 +748,7 @@ class Is2RsTrainer(BaseTrainer):
     def _forward(self, batch_list):
         # forward pass.
         # out = self.model(batch_list)
-        out_v, out_p, main_graph = self.model(batch_list)
+        out_p, out_v,main_graph = self.model(batch_list)
         out = {
             "vector": out_v if out_v is not None else torch.tensor([]),
             "positions": out_p if out_p is not None else torch.tensor([]),
@@ -767,13 +769,15 @@ class Is2RsTrainer(BaseTrainer):
             edge_index = main_graph['edge_index']
             src_tags = tags[edge_index[0]]
             dst_tags = tags[edge_index[1]]
+            dst_tags = tags[edge_index[1]]
             edge_mask = (src_tags != 0 ) & (dst_tags != 0)
             atom_mask = tags != 0
-            out['vector'] = out['vector'][edge_mask]
             out['positions'] = out['positions'][atom_mask]
-            self.v_target = -relax_graph['distance_vec'][edge_mask] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
-        else:
-            self.v_target = -relax_graph['distance_vec'] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
+            if out['vector'].shape[0]:
+                self.v_target = -relax_graph['distances'][edge_mask] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
+                out['vector'] = out['vector'][edge_mask]
+            else:
+                self.v_target = -relax_graph['distances'] # 因为main_graph在嵌入前对Vector取了反向，所以这里再次取反
         return out
 
     def _compute_loss(self, out, batch_list) -> int:
@@ -784,10 +788,11 @@ class Is2RsTrainer(BaseTrainer):
         if self.config["task"].get("train_on_free_atoms", True):
             tags = batch_list[0].tags
             atom_mask = tags != 0
-            p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin[atom_mask],
+            p_loss = p_mult*self.loss_fn['positions'](out['positions']+pos_origin[atom_mask],
                                                    pos_target[atom_mask])
         else:
-            p_loss = p_mult*self.loss_fn['vector'](out['positions']+pos_origin,
+            # print(out['positions'])
+            p_loss = p_mult*self.loss_fn['positions'](out['positions']+pos_origin,
                                                    pos_target)
         # ----------- 结构损失
         if out['vector'].shape[0]:

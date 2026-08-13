@@ -943,6 +943,7 @@ def get_max_neighbors_mask(
     ones = index.new_ones(1).expand_as(index)
     num_neighbors = segment_coo(ones, index, dim_size=num_atoms)
     max_num_neighbors = num_neighbors.max()
+    # print(max_num_neighbors, ',,,,,')
     num_neighbors_thresholded = num_neighbors.clamp(
         max=max_num_neighbors_threshold
     )
