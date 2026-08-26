@@ -7,7 +7,7 @@ model:
   name: equiformer_v2_ERD
 
   use_pbc:                  True
-#  regress_forces:           True
+  regress_forces:           False
   otf_graph:                True
   max_neighbors:            20
   max_radius:               12.0
