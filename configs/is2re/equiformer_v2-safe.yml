@@ -1,5 +1,5 @@
 includes:
-  - configs/SAFE/OC20/base-energy.yml
+  - configs/is2re/base-energy.yml
 
 trainer: equiformerv2_erd
 

@@ -1,5 +1,5 @@
 includes:
-  - configs/SAFE/OC20/base-is2rse.yml
+  - configs/is2re/base-is2rse.yml
 
 model:
   name: gemnet_is2rse
