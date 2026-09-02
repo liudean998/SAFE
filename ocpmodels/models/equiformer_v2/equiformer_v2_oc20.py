@@ -992,11 +992,12 @@ class EquiformerV2_OC20(BaseModel):
             enforce_max_neighbors_strictly=self.enforce_max_neighbors_strictly,
         )
         # print(data)
-        relax_graph = get_pbc_distances(data.pos_relaxed, edge_index, data.cell, cell_offsets, neighbors, return_offsets=True, return_distance_vec=True)
-        self.main_graph = {"edge_index": edge_index, "distance":edge_distance,
-                           "cell_offset":cell_offsets, "num_neighbors": neighbors,
-                           'target_vec': relax_graph['distance_vec'],
-                           'origin_vec': edge_distance_vec}
+        if 'pos_relaxed' in data:
+            relax_graph = get_pbc_distances(data.pos_relaxed, edge_index, data.cell, cell_offsets, neighbors, return_offsets=True, return_distance_vec=True)
+            self.main_graph = {"edge_index": edge_index, "distance":edge_distance,
+                               "cell_offset":cell_offsets, "num_neighbors": neighbors,
+                               'target_vec': relax_graph['distance_vec'],
+                               'origin_vec': edge_distance_vec}
         ###############################################################
         # Initialize data structures
         ###############################################################
