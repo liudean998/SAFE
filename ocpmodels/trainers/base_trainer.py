@@ -85,7 +85,6 @@ class BaseTrainer(ABC):
         self.cpu = cpu
         self.epoch = 0
         self.step = 0
-
         if torch.cuda.is_available() and not self.cpu:
             ####修改，适配torchrun
             world_size = os.getenv("WORLD_SIZE")
@@ -777,63 +776,6 @@ class BaseTrainer(ABC):
         if self.ema:
             self.ema.update()
 
-    # def save_results(
-    #     self, predictions, results_file: Optional[str], keys
-    # ) -> None:
-    #     if results_file is None:
-    #         return
-    #
-    #     results_file_path = os.path.join(
-    #         self.config["cmd"]["results_dir"],
-    #         f"{self.name}_{results_file}_{distutils.get_rank()}.npz",
-    #     )
-    #     np.savez_compressed(
-    #         results_file_path,
-    #         ids=predictions["id"],
-    #         **{key: predictions[key] for key in keys},
-    #     )
-    #
-    #     distutils.synchronize()
-    #     if distutils.is_master():
-    #         gather_results = defaultdict(list)
-    #         full_path = os.path.join(
-    #             self.config["cmd"]["results_dir"],
-    #             f"{self.name}_{results_file}.npz",
-    #         )
-    #
-    #         for i in range(distutils.get_world_size()):
-    #             rank_path = os.path.join(
-    #                 self.config["cmd"]["results_dir"],
-    #                 f"{self.name}_{results_file}_{i}.npz",
-    #             )
-    #             rank_results = np.load(rank_path, allow_pickle=True)
-    #             gather_results["ids"].extend(rank_results["ids"])
-    #             for key in keys:
-    #                 if key.find("forces") >= 0:
-    #                     gather_results[key].extend(np.array_split(rank_results[key], np.cumsum(rank_results['chunk_idx'])[: -1]))
-    #                 else:
-    #                     gather_results[key].extend(rank_results[key])
-    #             os.remove(rank_path)
-    #
-    #         # Because of how distributed sampler works, some system ids
-    #         # might be repeated to make no. of samples even across GPUs.
-    #         _, idx = np.unique(gather_results["ids"], return_index=True)
-    #         gather_results["ids"] = np.array(gather_results["ids"])[idx]
-    #         for k in keys:
-    #             if k.find("forces") >= 0:
-    #                 gather_results[k] = np.concatenate(
-    #                     [gather_results[k][idx_i] for idx_i in idx]
-    #                 )
-    #             elif k == "chunk_idx":
-    #                 gather_results[k] = np.cumsum(
-    #                     np.array(gather_results[k])[idx]
-    #                 )[:-1]
-    #             else:
-    #                 gather_results[k] = np.array(gather_results[k])[idx]
-    #
-    #         logging.info(f"Writing results to {full_path}")
-    #         np.savez_compressed(full_path, **gather_results)
-
     def save_results(self, predictions, results_file: Optional[str], keys) -> None:
         if results_file is None:
             return
@@ -843,14 +785,6 @@ class BaseTrainer(ABC):
             f"{self.name}_{results_file}_{distutils.get_rank()}.npz",
         )
 
-        # # 保存 ids1 和 ids2 而不是单个 id
-        # np.savez_compressed(
-        #     results_file_path,
-        #     ids1=predictions["ids1"],
-        #     # ids2=predictions["ids2"],
-        #     **{key: predictions[key] for key in keys},
-        # )
-
         logging.info(f"Writing results to {results_file_path}")
         np.savez_compressed(
             results_file_path,
@@ -858,51 +792,4 @@ class BaseTrainer(ABC):
             **{key: predictions[key] for key in keys},
         )
 
-        # distutils.synchronize()
-        # if distutils.is_master():
-        #     gather_results = defaultdict(list)
-        #     full_path = os.path.join(
-        #         self.config["cmd"]["results_dir"],
-        #         f"{self.name}_{results_file}.npz",
-        #     )
-        #
-        #     for i in range(distutils.get_world_size()):
-        #         rank_path = os.path.join(
-        #             self.config["cmd"]["results_dir"],
-        #             f"{self.name}_{results_file}_{i}.npz",
-        #         )
-        #         rank_results = np.load(rank_path, allow_pickle=True)
-        #         gather_results["ids"].extend(rank_results["ids"])
-        #         # gather_results["ids1"].extend(rank_results["ids1"])
-        #         # gather_results["ids2"].extend(rank_results["ids2"])
-        #         for key in keys:
-        #             if key.find("forces") >= 0:
-        #                 gather_results[key].extend(
-        #                     np.array_split(rank_results[key], np.cumsum(rank_results['chunk_idx'])[: -1]))
-        #             else:
-        #                 gather_results[key].extend(rank_results[key])
-        #         os.remove(rank_path)
-        #     # 暂时修改
-        #     print(gather_results, 'rrrrr')
-        #     # # 处理重复的问题
-        #     # # combined_ids = [f"{id1}_{id2}" for id1, id2 in zip(gather_results["ids1"], gather_results["ids2"])]
-        #     # # combined_ids = gather_results["ids1"]
-        #     # combined_ids = gather_results["ids"]
-        #     # _, idx = np.unique(combined_ids, return_index=True)
-        #     # # gather_results["ids1"] = np.array(gather_results["ids1"])[idx]
-        #     # gather_results["ids"] = np.array(gather_results["ids"])[idx]
-        #     # # gather_results["ids2"] = np.array(gather_results["ids2"])[idx]
-        #     # for k in keys:
-        #     #     if k.find("forces") >= 0:
-        #     #         gather_results[k] = np.concatenate(
-        #     #             [gather_results[k][idx_i] for idx_i in idx]
-        #     #         )
-        #     #     elif k == "chunk_idx":
-        #     #         gather_results[k] = np.cumsum(
-        #     #             np.array(gather_results[k])[idx]
-        #     #         )[:-1]
-        #     #     else:
-        #     #         gather_results[k] = np.array(gather_results[k])[idx]
-        #     logging.info(f"Writing results to {full_path}")
-        #     np.savez_compressed(full_path, **gather_results)
 

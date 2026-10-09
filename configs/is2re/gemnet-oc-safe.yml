@@ -63,10 +63,10 @@ model:
   qint_tags: [1, 2]
 
 optim:
-  batch_size: 128 #
-  eval_batch_size: 200 #
+  batch_size: 32 #
+  eval_batch_size: 32 #
   load_balancing: atoms
-  eval_every: 2000 #
+  eval_every: 60 #
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
@@ -75,14 +75,17 @@ optim:
   mode: min
   factor: 0.8
   patience: 3
-  max_epochs: 100
+  max_epochs: 200
   force_coefficient: 1
   graph_coefficient: 1
   pos_coefficient: 1
-  energy_coefficient: 1
+  energy_coefficient: 5
   ema_decay: 0.999
   clip_grad_norm: 10
   loss_energy: mae
   loss_force: mae_v
-  loss_vector: mae_v
+  loss_vector: mae
+  loss_positions: mae_v
   weight_decay: 0
+  seed: 1
+

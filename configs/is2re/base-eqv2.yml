@@ -1,0 +1,37 @@
+trainer: energy
+
+dataset:
+#  - src: /dataset/train
+#    normalize_labels: True # 预测能量时，对能量进行标准化
+#    target_mean: -1.5260
+#    target_std: 2.2793
+##    grad_target_mean: 0.0
+##    grad_target_std: 2.887317180633545
+#  - src: /dataset/val
+#  - src: /dataset/test
+  - src: /data2/liud/dataset/Cu_single/3/tags/train
+    normalize_labels: True
+    target_mean: -1.5260
+    target_std: 2.2793
+  - src: /data2/liud/dataset/Cu_single/3/tags/val
+#  - src: /data2/liud/dataset/Cu_single/9/tags/test
+#   - src: /media/liud/lnz_2t/Cu_single/combined/4/tags/train
+#     normalize_labels: True
+#     target_mean: -1.5260
+#     target_std: 2.2793
+#   - src: /media/liud/lnz_2t/Cu_single/combined/4/tags/val
+#   - src: /media/liud/lnz_2t/Cu_single/CO_CuSAAS_SurfAds/0/val
+
+
+logger: tensorboard
+
+task:
+  dataset: trajectory_lmdb
+  description: "Regressing to energies and forces for DFT trajectories from OCP"
+  type: regression
+  metric: mae
+  labels:
+    - potential energy
+  grad_input: atomic forces
+  train_on_free_atoms: True
+  eval_on_free_atoms: True

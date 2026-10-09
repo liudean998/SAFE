@@ -187,8 +187,8 @@ class EnergyTrainer(BaseTrainer):
         print('mean_batch time', mean_batch_time*1000, 'ms')
         print('th', throughput)
         print('tital time', total_time)
-
-        time.sleep(10000)
+        #
+        # time.sleep(10000)
         self.save_results(predictions, results_file, keys=["energy"])
 
         if self.ema:
