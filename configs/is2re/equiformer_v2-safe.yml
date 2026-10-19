@@ -67,7 +67,7 @@ optim:
 
   max_epochs: 100
 #  force_coefficient: 100
-  energy_coefficient: 5
+  energy_coefficient: 1
   pos_coefficient: 1
   graph_coefficient: 1
   clip_grad_norm: 100

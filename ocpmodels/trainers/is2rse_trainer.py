@@ -215,7 +215,9 @@ class Is2RseTrainer(BaseTrainer):
                 )
 
     def train(self, disable_eval_tqdm: bool = False) -> None:
-
+        # start_total = time.perf_counter()
+        # batch_time = []
+        # num_stru = 0
         ensure_fitted(self._unwrapped_model, warn=True)
 
         eval_every = self.config["optim"].get(
@@ -248,6 +250,7 @@ class Is2RseTrainer(BaseTrainer):
             train_loader_iter = iter(self.train_loader)
 
             for i in range(skip_steps, len(self.train_loader)):
+                # start_batch = time.perf_counter()
                 self.epoch = epoch_int + (i + 1) / len(self.train_loader)
                 self.step = epoch_int * len(self.train_loader) + i + 1
                 self.model.train()
@@ -346,12 +349,27 @@ class Is2RseTrainer(BaseTrainer):
                         )
                 else:
                     self.scheduler.step()
-
+                # end_batch = time.perf_counter()
+                # batch_time.append(end_batch - start_batch)
+                # num_stru += len(batch[0].y)
             torch.cuda.empty_cache()
 
             if checkpoint_every == -1:
                 self.save(checkpoint_file="checkpoint.pt", training_state=True)
 
+        # torch.cuda.synchronize()
+        # end_total = time.perf_counter()
+        # total_time = end_total - start_total
+        # mean_batch_time = sum(batch_time)/len(batch_time)
+        # throughput = num_stru/total_time
+        #
+        # peak_all = torch.cuda.max_memory_cached()/1024**3
+        # peak_res = torch.cuda.max_memory_reserved() / 1024**3
+        # print('peak_all', peak_all)
+        # print('peak_res', peak_res)
+        # print('mean_batch time', mean_batch_time*1000, 'ms')
+        # print('th', throughput)
+        # print('tital time', total_time)
         self.train_dataset.close_db()
         if self.config.get("val_dataset", False):
             self.val_dataset.close_db()

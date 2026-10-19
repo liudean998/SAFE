@@ -1,20 +1,11 @@
 trainer: is2rse
 dataset:
-#  - src: /dataset/train
-#  - src: /media/liud/lnz_2t/Cu_single/combined/7/tags/train
-#    normalize_labels: True
-#    target_mean: -1.5260
-#    target_std: 2.2793
-#  - src: /media/liud/lnz_2t/Cu_single/combined/7/tags/val
-#  - src: /media/liud/lnz_2t/Cu_single/CO_CuSAAS_SurfAds/0/val
-#  - src: /dataset/val
-#  - src: /dataset/test
-  - src: /data2/liud/dataset/Cu_single/7/tags/train
+  - src: /dataset/train
     normalize_labels: True
     target_mean: -1.5260
     target_std: 2.2793
-  - src: /data2/liud/dataset/Cu_single/7/tags/val
-  - src: /data2/liud/dataset/Cu_single/9/tags/test
+  - src: /dataset/val
+  - src: /dataset/test
 
 
 logger: tensorboard

@@ -1,95 +1,160 @@
-# `ocp` by Open Catalyst Project
-
-[![CircleCI](https://circleci.com/gh/Open-Catalyst-Project/ocp.svg?style=shield)](https://circleci.com/gh/Open-Catalyst-Project/ocp)
-[![codecov](https://codecov.io/gh/Open-Catalyst-Project/ocp/graph/badge.svg?token=M606LH5LK6)](https://codecov.io/gh/Open-Catalyst-Project/ocp)
-
-`ocp` is the [Open Catalyst Project](https://opencatalystproject.org/)'s
-library of state-of-the-art machine learning algorithms for catalysis.
-
 <div align="left">
-    <img src="https://user-images.githubusercontent.com/1156489/170388229-642c6619-dece-4c88-85ef-b46f4d5f1031.gif">
-</div>
 
-It provides training and evaluation code for tasks and models that take arbitrary
-chemical structures as input to predict energies / forces / positions, and can
-be used as a base scaffold for research projects. For an overview of tasks, data, and metrics, please read our papers:
- - [OC20](https://arxiv.org/abs/2010.09990)
- - [OC22](https://arxiv.org/abs/2206.08917)
- - [ODAC23](https://arxiv.org/abs/2311.00341)
+# SAFE
 
-Projects developed on `ocp`:
+**Structure-Assisted Feature Enhancement for End-to-End Adsorption-Energy Prediction**
 
-- CGCNN [[`arXiv`](https://arxiv.org/abs/1710.10324)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/cgcnn.py)]
-- SchNet [[`arXiv`](https://arxiv.org/abs/1706.08566)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/schnet.py)]
-- DimeNet [[`arXiv`](https://arxiv.org/abs/2003.03123)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/dimenet.py)]
-- ForceNet [[`arXiv`](https://arxiv.org/abs/2103.01436)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/forcenet.py)]
-- DimeNet++ [[`arXiv`](https://arxiv.org/abs/2011.14115)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/dimenet_plus_plus.py)]
-- SpinConv [[`arXiv`](https://arxiv.org/abs/2106.09575)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/blob/main/ocpmodels/models/spinconv.py)]
-- GemNet-dT [[`arXiv`](https://arxiv.org/abs/2106.08903)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/gemnet)]
-- PaiNN [[`arXiv`](https://arxiv.org/abs/2102.03150)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/painn)]
-- Graph Parallelism [[`arXiv`](https://arxiv.org/abs/2203.09697)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/gemnet_gp)]
-- GemNet-OC [[`arXiv`](https://arxiv.org/abs/2204.02782)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/gemnet_oc)]
-- SCN [[`arXiv`](https://arxiv.org/abs/2206.14331)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/scn)]
-- eSCN [[`arXiv`](https://arxiv.org/abs/2302.03655)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/escn)]
-- EquiformerV2 [[`arXiv`](https://arxiv.org/abs/2306.12059)] [[`code`](https://github.com/Open-Catalyst-Project/ocp/tree/main/ocpmodels/models/equiformer_v2)]
+[Getting Started](#getting-started) ·  [Training & Inference](#training-and-inference) · [Datasets](#datasets) ·[Models](#models)
 
-## Installation
+---
 
-See [installation instructions](https://github.com/Open-Catalyst-Project/ocp/blob/main/INSTALL.md).
+## Overview
 
-## Download data
+**SAFE** is a framework designed to improve **adsorption energy prediction for the Initial Structure to Relaxed Energy (IS2RE) task**.
 
-Dataset download links and instructions are in [DATASET.md](https://github.com/Open-Catalyst-Project/ocp/blob/main/DATASET.md).
+SAFE focuses on **structure-assisted feature enhancement**, using structural information to improve the feature representations of IS2RE adsorption-energy prediction models.
 
-## Train and evaluate models
+The codebase uses **PyTorch**, **PyTorch Geometric**, and the `ocpmodels` framework. It can serve as a starting point for experiments on atomistic graph neural networks, catalyst–adsorbate systems, and related materials.
 
-A detailed description of how to train and evaluate models, run ML-based
-relaxations, and generate EvalAI submission files can be found in
-[TRAIN.md](https://github.com/Open-Catalyst-Project/ocp/blob/main/TRAIN.md).
 
-Our evaluation server is [hosted on EvalAI](https://eval.ai/web/challenges/challenge-page/712/overview).
-Numbers (in papers, etc.) should be reported from the evaluation server.
+## Repository Structure
 
-Interactive tutorial notebooks can be found
-[here](https://github.com/Open-Catalyst-Project/ocp/tree/main/tutorials) to
-get familiar with various components of the codebase.
+```text
+SAFE/
+├── configs/               # Experiment and model configurations
+├── ocpmodels/             # Models, trainers, tasks, and utilities
+├── scripts/               # Preprocessing and experiment utilities
+├── data_analyse/          # Data analysis code
+├── main.py                # Main command-line entry point
+├── environment.yml        # Conda environment specification
+├── requirements.txt       # Python dependencies
+└── LICENSE.md             # License
+```
 
-## Pretrained model weights
+## Getting Started
 
-We provide several pretrained model weights for download
-[here](https://github.com/Open-Catalyst-Project/ocp/blob/main/MODELS.md).
+### 1. Prerequisites
 
-## Discussion
+We recommend using a **Linux** environment with **Conda or Mamba** for dependency management. GPU-accelerated training requires an NVIDIA GPU with a compatible CUDA driver.
 
-For all non-codebase related questions and to keep up-to-date with the latest OCP
-announcements, please join the [discussion board](https://discuss.opencatalystproject.org/).
+The required software environment is specified in `environment.yml`:
 
-All code-related questions and issues should be posted directly on our
-[issues page](https://github.com/Open-Catalyst-Project/ocp/issues).
-Make sure to first go through the [FAQ](https://github.com/Open-Catalyst-Project/ocp/tree/main/FAQ.md)
-to check if your question's answered already.
+```text
+Python: 3.9
+PyTorch: 1.13.1
+CUDA: 11.6
+```
+
+### 2. Clone the repository
+
+```bash
+git clone https://github.com/liudean998/SAFE.git
+cd SAFE
+```
+
+### 3. Create the environment
+
+The following uses the repository's `environment.yml`:
+
+```bash
+conda env create -f environment.yml
+conda activate ocp-models
+python -m pip install -e .
+```
+
+**Verify the installation:**
+
+```bash
+python -c "import torch; import torch_geometric; import ocpmodels; print('PyTorch:', torch.__version__)"
+python main.py --help
+```
+
+## Training and Inference
+
+SAFE supports both **training from scratch** and **inference using pretrained models**.
+
+The datasets used in this study are described in the [Datasets](#datasets) section, and pretrained model checkpoints are provided in the [Models](#models) section.
+
+### Train from Scratch
+
+To train a model from scratch, specify the corresponding YAML configuration file:
+
+```bash
+python main.py \
+  --mode train \
+  --config "$CONFIG" 
+```
+
+Checkpoints and logs are saved to the output directories specified by the experiment configuration.
+
+### Inference with a Pretrained Model
+
+To perform inference using a pretrained checkpoint:
+
+```bash
+python main.py \
+  --mode predict \
+  --config "$CONFIG" \
+  --checkpoint /path/to/checkpoint.pt
+```
+
+The input dataset and prediction output path are determined by the selected configuration.
+
+## Datasets
+
+The datasets used in this work are available from:
+
+- **HetCataX:** https://hetcatax.com
+- **Zenodo:** https://doi.org/10.5281/zenodo.20842824
+
+| Dataset             | Description                                                  | Download                                                     |
+| ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **OC20-SurfAds**    | OC20-derived dataset retaining only surface–adsorbate structures | [download](https://zenodo.org/records/20842824/files/OC20-SurfAds.zip?download=1) |
+| **OC20-SurfAds-AF** | Filtered subset of OC20-SurfAds used in this work            | [download](https://zenodo.org/records/20842824/files/OC20-SurfAds-AF.zip?download=1) |
+| **SAAs-SurfAds**    | SAAs-derived dataset retaining only surface–adsorbate structures | [download](https://zenodo.org/records/20842824/files/CO_CuSAAS_SurfAds.zip?download=1) |
+
+The datasets used in this study were constructed and processed based on the following publicly available source datasets:
+
+- **OC20:** https://fair-chem.github.io/oc20/
+- **SAAs:** https://zenodo.org/records/10679574
+
+For reproducing the experiments reported in this work, we recommend using the processed datasets provided through **HetCataX** or **Zenodo**, as these correspond to the data preparation used in the SAFE experiments.
+
+## Models
+
+The table below lists the main models trained on the **OC20-SurfAds** and **OC20-SurfAds-AF** datasets. These pretrained models can be downloaded directly and used for inference or further experiments.
+
+| Model                 | Dataset         | MAE (ID) | Download                                                                          |
+| --------------------- | --------------- | -------- |-----------------------------------------------------------------------------------|
+| **GemNet-OC**         | OC20-SurfAds    | 0.5743   | [download](https://zenodo.org/records/23294701/files/gemnet_oc_see0.pt?download=1) |
+| **GemNet-OC-SAFE**    | OC20-SurfAds    | 0.4878   | [download](https://zenodo.org/records/23294701/files/gemnet_oc_safe_seed0.pt?download=1) |
+| **GemNet-OC**         | OC20-SurfAds-AF | 0.4323   | [download](https://zenodo.org/records/23294701/files/gemnet_oc_af.pt?download=1) |
+| **GemNet-OC-SAFE**    | OC20-SurfAds-AF | 0.3973   | [download](https://zenodo.org/records/23294701/files/gemnet_oc_safe_af.pt?download=1)                                                                                  |
+| **EquiformerV2**      | OC20-SurfAds    | 0.5234   | [download](https://zenodo.org/records/23294701/files/eqv2_seed0.pt?download=1)                                                                                  |
+| **EquiformerV2-SAFE** | OC20-SurfAds    | 0.4464   | [download](https://zenodo.org/records/23294701/files/eqv2_safe_seed0.pt?download=1)                                                                                  |
+| **EquiformerV2**      | OC20-SurfAds-AF | 0.3939   | [download](https://zenodo.org/records/23294701/files/eqv2-af.pt?download=1)       |                                                                  |
+| **EquiformerV2-SAFE** | OC20-SurfAds-AF | 0.3278   | [download](https://zenodo.org/records/23294701/files/eqv2-safe-af.pt?download=1)  |                                                              |
+
+Due to the large number of trained models and checkpoints generated in this study, only the main models are listed above. Additional pretrained models and checkpoints are available from [**Zenodo**](https://doi.org/10.5281/zenodo.20842824).
 
 ## Acknowledgements
 
-- This codebase was initially forked from [CGCNN](https://github.com/txie-93/cgcnn)
-by [Tian Xie](http://txie.me), but has undergone significant changes since.
-- A lot of engineering ideas have been borrowed from [github.com/facebookresearch/mmf](https://github.com/facebookresearch/mmf).
-- The DimeNet++ implementation is based on the [author's Tensorflow implementation](https://github.com/klicperajo/dimenet) and the [DimeNet implementation in Pytorch Geometric](https://github.com/rusty1s/pytorch_geometric/blob/master/torch_geometric/nn/models/dimenet.py).
+This repository builds on the [Open Catalyst Project / OCP](https://github.com/Open-Catalyst-Project/ocp) and its broader ecosystem. We acknowledge the OCP contributors and the authors of the model architectures and libraries used in the codebase.
+
+For the original OCP dataset and tasks, see:
+
+> Chanussot, L. *et al.* **Open Catalyst 2020 (OC20) Dataset and Community Challenges.** *ACS Catalysis* (2021). [DOI: 10.1021/acscatal.0c04525](https://doi.org/10.1021/acscatal.0c04525)
+
+If you use a particular model implementation, dataset, or upstream component, please also cite its original publication. 
 
 ## License
 
-`ocp` is released under the [MIT](https://github.com/Open-Catalyst-Project/ocp/blob/main/LICENSE.md) license.
+This repository includes an [MIT License](LICENSE.md). Please retain applicable attribution and license notices for code originating from the Open Catalyst Project and other dependencies.
 
-## Citing `ocp`
+---
 
-If you use this codebase in your work, please consider citing:
+<div align="center">
 
-```bibtex
-@article{ocp_dataset,
-    author = {Chanussot*, Lowik and Das*, Abhishek and Goyal*, Siddharth and Lavril*, Thibaut and Shuaibi*, Muhammed and Riviere, Morgane and Tran, Kevin and Heras-Domingo, Javier and Ho, Caleb and Hu, Weihua and Palizhati, Aini and Sriram, Anuroop and Wood, Brandon and Yoon, Junwoong and Parikh, Devi and Zitnick, C. Lawrence and Ulissi, Zachary},
-    title = {Open Catalyst 2020 (OC20) Dataset and Community Challenges},
-    journal = {ACS Catalysis},
-    year = {2021},
-    doi = {10.1021/acscatal.0c04525},
-}
-```
+**SAFE** · [Repository](https://github.com/liudean998/SAFE) · [Issues](https://github.com/liudean998/SAFE/issues)
+
+</div>
