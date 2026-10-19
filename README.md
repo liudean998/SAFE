@@ -135,7 +135,7 @@ The table below lists the main models trained on the **OC20-SurfAds** and **OC20
 | **EquiformerV2**      | OC20-SurfAds-AF | 0.3939   | [download](https://zenodo.org/records/23294701/files/eqv2-af.pt?download=1)       |                                                                  |
 | **EquiformerV2-SAFE** | OC20-SurfAds-AF | 0.3278   | [download](https://zenodo.org/records/23294701/files/eqv2-safe-af.pt?download=1)  |                                                              |
 
-Due to the large number of trained models and checkpoints generated in this study, only the main models are listed above. Additional pretrained models and checkpoints are available from [**Zenodo**](https://doi.org/10.5281/zenodo.20842824).
+Due to the large number of trained models and checkpoints generated in this study, only the main models are listed above. Additional pretrained models and checkpoints are available from https://doi.org/10.5281/zenodo.23294701.
 
 ## Acknowledgements
 
