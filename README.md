@@ -85,7 +85,11 @@ To train a model from scratch, specify the corresponding YAML configuration file
 python main.py --mode train --config-yml "$CONFIG" --seed $SEED
 ```
 
-Here, `$CONFIG` is a placeholder for the path to a YAML configuration file, which can be specified either as an **absolute path** or as a **relative path from the project root directory**. The `--seed` argument specifies the random seed used for reproducibility (default: `0`).
+The arguments are explained below:
+
+- `--mode train`: Sets the execution mode to training.
+- `--config-yml "$CONFIG"`: Specifies the absolute path or the relative path from the project root directory to the YAML configuration file.
+- `--seed $SEED`: Specifies the random seed used for training.
 
 By default, trained model checkpoints are saved in the `checkpoints/` directory, training logs are stored in the `logs/` directory, and prediction results are saved in the `results/` directory.
 
@@ -117,8 +121,8 @@ The arguments are explained below:
 - `--nproc_per_node`: Launches two training processes on the node, typically one per GPU.
 - `--num-gpus`: Specifies the total number of GPUs used by the training script.
 - `--mode train`: Sets the execution mode to training.
-- `--config-yml "$CONFIG"`: Specifies the YAML configuration file containing the model architecture, dataset paths, and training hyperparameters.
-- `--seed $SEED`: Sets the random seed.
+- `--config-yml "$CONFIG"`: Specifies the absolute path or the relative path from the project root directory to the YAML configuration file.
+- `--seed $SEED`: Specifies the random seed used for training.
 
 The number of GPUs can be adjusted according to the available hardware. For single-node training, `--nproc_per_node` and `--num-gpus` should be set consistently with the number of GPUs used.
 
@@ -132,12 +136,8 @@ python main.py --mode predict --config-yml "$CONFIG" --checkpoint "$CHECKPOINT"
 
 The input dataset and prediction output path are determined by the selected configuration.
 
-**For Example:**
-
-```bash
-python main.py --mode predict --config-yml configs/is2re-safe-paper/SAAs/equiformer_v2.yml \
---checkpoint example/eqv2-saas0-seed0.pt
-```
+- `--config-yml "$CONFIG"`: Specifies the absolute path or the relative path from the project root directory to the YAML configuration file.
+- `--checkpoint "$CHECKPOINT"`: Specifies the absolute path or the relative path from the project root directory to the pretrained model checkpoint file.The checkpoint must match the model configuration specified by `--config-yml`.
 
 ### Evaluation
 
