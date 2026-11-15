@@ -1,12 +1,12 @@
 trainer: energy
 
 dataset:
-  - src: /dataset/train
+  - src: dataset/train/
     normalize_labels: True
     target_mean: -1.5260
     target_std: 2.2793
-  - src: /dataset/val
-  - src: /dataset/test
+  - src: dataset/val
+  - src: dataset/test
 
 
 
@@ -14,7 +14,6 @@ logger: tensorboard
 
 task:
   dataset: trajectory_lmdb
-  description: "Regressing to energies and forces for DFT trajectories from OCP"
   type: regression
   metric: mae
   labels:

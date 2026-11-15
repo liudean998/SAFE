@@ -1,10 +1,10 @@
 includes:
-  - configs/is2re/base-eqv2.yml
+  - configs/is2re-common/base/base-eqv2.yml
 
-trainer: equiformerv2_erd
+trainer: equiformerv2_energy
 
 model:
-  name: equiformer_v2_ERD
+  name: equiformer_v2
 
   use_pbc:                  True
   regress_forces:           False
@@ -68,13 +68,8 @@ optim:
   max_epochs: 100
 #  force_coefficient: 100
   energy_coefficient: 1
-  pos_coefficient: 1
-  graph_coefficient: 1
   clip_grad_norm: 100
   ema_decay: 0.999
   loss_energy: mae
-#  loss_force: mae_v
-  loss_vector: mae_v
-  loss_positions: mae_v
 
   eval_every: 500

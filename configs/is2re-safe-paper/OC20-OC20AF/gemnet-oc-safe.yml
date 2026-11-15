@@ -1,5 +1,5 @@
 includes:
-  - configs/is2re/base-is2rse.yml
+  - configs/is2re-common/base/base-is2rse.yml
 
 model:
   name: gemnet_is2rse
@@ -42,7 +42,7 @@ model:
   extensive: True
   output_init: HeOrthogonal
   activation: silu
-  scale_file: configs/s2ef/all/gemnet/scaling_factors/gemnet-oc.pt
+  scale_file: configs/is2re/scaling_factors/gemnet-oc.pt
 
 #  regress_forces: True
   regress_forces: False
@@ -51,6 +51,7 @@ model:
   forces_coupled: True
   update_v: True
   update_p: True
+  otf_graph: True
 
   quad_interaction: False
   atom_edge_interaction: True
@@ -63,10 +64,10 @@ model:
   qint_tags: [1, 2]
 
 optim:
-  batch_size: 32 #
-  eval_batch_size: 32 #
+  batch_size: 128 #
+  eval_batch_size: 200 #
   load_balancing: atoms
-  eval_every: 600 #
+  eval_every: 2000 #
   num_workers: 2
   lr_initial: 5.e-4
   optimizer: AdamW
@@ -87,5 +88,4 @@ optim:
   loss_vector: mae
   loss_positions: mae_v
   weight_decay: 0
-  seed: 1
 
